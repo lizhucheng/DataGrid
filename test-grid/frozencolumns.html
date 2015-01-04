@@ -1,0 +1,199 @@
+﻿<!doctype html>
+<html>
+<head>
+<title>test</title>
+<script src="jquery-1.9.1.js"></script>
+<script src="Cube.js"></script>
+<script>
+console._debug=true;
+$(function($){
+	$('.view').scroll(function(){
+		//console.log(this.scrollLeft);
+		$('.content1',this).get(0).style.left=this.scrollLeft+'px';
+		$('.header2>table')[0].style.marginLeft=0-this.scrollLeft+'px';
+		$('.veiwHeader',this)[0].style.marginLeft=this.scrollLeft+'px';
+		$('.veiwHeader',this)[0].style.top=this.scrollTop+'px';
+	})
+})
+
+$(function () {
+    var data = [];
+	var rowCount=500;
+	var arr1=new Array(1000);
+	var arr2=new Array(1000);
+    for (var i = 0; i <rowCount ; i++) {
+      data[i] = {
+		rowNum:i+1,
+        title: "Task " + i,
+        duration: "5 days",
+        percentComplete: Math.round(Math.random() * 100),
+        start: "01/01/2009",
+        finish: "01/05/2009",
+        effortDriven: (i % 5 == 0)
+      };
+    }
+	var fields=['rowNum','title','duration','percentComplete','start','finish','effortDriven','title','duration','percentComplete','start','finish','effortDriven','title','duration','percentComplete','start','finish','effortDriven','title','duration','percentComplete','start','finish','effortDriven'];
+	//var fields=['rowNum','title','duration','percentComplete','start','finish','effortDriven'];
+	var colCount=fields.length;
+	var frozenCols=new Array(100);
+	var otherCols=new Array(100);
+	var j=0;
+	var frozenColIndex=3;
+	frozenCols[j++]='<tr>';
+	for(var i=0;i<=frozenColIndex;i++){
+		frozenCols[j++]='<th width="120">';
+		frozenCols[j++]=fields[i];
+		frozenCols[j++]='</th>';
+	}
+	frozenCols[j++]='</tr>';
+	otherCols[j++]='<tr>';
+	for(;i<colCount;i++){
+		otherCols[j++]='<th width="120">';
+		otherCols[j++]=fields[i];
+		otherCols[j++]='</th>';
+	}
+	otherCols[j++]='</tr>';
+	frozenCols=frozenCols.join('');
+	otherCols=otherCols.join('');
+	
+	var j=0;
+	//arr[j++]='<table border="1" collapse="collapse" cellspacing="0">';
+	var colors=['#ff0','#fea','#0fe','#123'];
+	var colorCount=colors.length;
+	for(var i=0;i<rowCount;i++){
+		//frozen cols
+		arr1[j++]='<tr>';
+		for(var s=0;s<=frozenColIndex;s++){
+			arr1[j++]='<td style="background-color:'+colors[Math.floor(Math.random()*colorCount)]+'">';
+			//arr1[j++]='<td>';
+			arr1[j++]=data[i][fields[s]];
+			arr1[j++]='</td>';
+		}
+		arr1[j++]='</tr>';
+		//
+		arr2[j++]='<tr>';
+		for(;s<colCount;s++){
+			arr2[j++]='<td style="background-color:'+colors[Math.floor(Math.random()*colorCount)]+'">';
+			//arr2[j++]='<td>';
+			arr2[j++]=data[i][fields[s]];
+			arr2[j++]='</td>';
+		}
+		arr2[j++]='</tr>';
+	}
+	//arr[j++]="</table>";
+	
+	$('.header1 thead,.content1 thead').each(function(i,ele){
+		ele.innerHTML=frozenCols;
+	});
+	$('.header2 thead,.content2 thead').each(function(i,ele){
+		ele.innerHTML=otherCols;
+	});
+	
+	$('.viewBody').hide();
+	$('.viewBody .content1 tbody').html($(arr1.join('')));
+	$('.viewBody .content2 tbody').html($(arr2.join('')));
+	$('.viewBody').show();
+
+});
+</script>
+<style>
+.grid{
+	width:1000px;
+	height:300px;
+	position:relative;
+	overflow:hidden;
+	
+	background-color:#fff;
+}
+.grid thead,.grid tr{
+	/*height:20px;*/
+}
+
+.grid table{
+	border-collapse:collapse;
+	/*table-layout:fixed;*/
+}
+.view,.veiwHeader,.header,.header>div,.viewBody,.viewBody>div{
+	background-color:inherit;
+}
+.view{
+	width:100%;
+	height:100%;
+	background-color:yellow;
+	overflow:auto;
+	position:relative;
+}
+.content1{
+	position:absolute;
+	top:0;
+	left:0;
+	width:485px;
+	height:1000px;
+	background-color:red;
+	z-index:2;
+}
+.content2{
+	width:2000px;
+	height:1000px;
+	margin-left:485px;
+	background-color:green;
+}
+.grid thead th{
+	width:120px;
+}
+.veiwHeader{	
+	position:absolute;
+	top:0;
+	left:0;
+	z-index:4;
+	
+	background-color:#fff;
+	width:100%;
+	overflow:hidden;
+}
+.header{
+	white-space:nowrap;
+	width:10000px;
+}
+.header>div{
+	float:left;
+	position:relative;
+	background-color:#fff;
+}
+.header1{
+	z-index:2;
+}
+.header2{
+	z-index:1;
+	
+}
+
+.viewBody thead{
+	/*visibility:hidden;*/
+}
+
+
+
+.nowrap>div>table>tbody>tr>td{
+	white-space:nowrap;
+}
+</style>
+</head>
+<body>
+<div class="grid">
+<div class="view">
+	<div class="veiwHeader">
+		<div class="header">
+			<div class="header1"><table border="1"><thead></thead></table></div>
+			<div class="header2"><table border="1"><thead></thead></table></div>
+		</div>
+	</div>
+	<div class="viewBody nowrap">
+		<div class="content1"><table border="1"><thead></thead><tbody></tbody></table></div>
+		<div class="content2"><table border="1"><thead></thead><tbody></tbody></table></div>
+	</div>
+</div>
+</div>
+
+</body>
+</html>

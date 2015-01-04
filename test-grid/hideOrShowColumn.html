@@ -1,0 +1,66 @@
+﻿<!doctype html>
+<html>
+<head>
+<title>test</title>
+<script src="jquery-1.9.1.js"></script>
+<script src="Cube.js"></script>
+<script>
+function hideColumn(index){
+	$('>td:eq('+index+')','tr').hide();
+}
+function showColumn(index){
+	$('>td:eq('+index+')','tr').show();
+}
+
+
+$(function () {
+    var data = [];
+	var rowCount=100;
+	var arr=new Array(1000);
+    for (var i = 0; i <rowCount ; i++) {
+      data[i] = {
+        title: "Task " + i,
+        duration: "5 days",
+        percentComplete: Math.round(Math.random() * 100),
+        start: "01/01/2009",
+        finish: "01/05/2009",
+        effortDriven: (i % 5 == 0)
+      };
+    }
+	var fields=['title','duration','percentComplete','start','finish','effortDriven','title','duration','percentComplete','start','finish','effortDriven','title','duration','percentComplete','start','finish','effortDriven','title','duration','percentComplete','start','finish','effortDriven'];
+	var colCount=fields.length;
+	var j=0;
+	arr[j++]='<table border="1" collapse="collapsed">';
+	var colors=['#ff0','fea','#0fe','#123'];
+	var colorCount=colors.length;
+	for(var i=0;i<rowCount;i++){
+		arr[j++]='<tr>';
+		for(var s=0;s<colCount;s++){
+			arr[j++]='<td style="background-color:'+colors[Math.floor(Math.random()*colorCount)]+'">';
+			arr[j++]=data[i][fields[s]];
+			arr[j++]='</td>';
+		}
+		arr[j++]='</tr>';
+	}
+	arr[j++]="</table>";
+
+	$('body').html($(arr.join('')));
+});
+/*
+	统计结果：500行记录时，显示和隐藏功能用时都为67ms；100行记录时用时13ms；与列数量无关。
+*/
+</script>
+<style>
+
+</style>
+</head>
+<body>
+<table border="1">
+<tbody>
+<tr><td>1111</td><td>2222</td><td>3333</td></tr>
+<tr><td>aaaa</td><td>sssss</td><td>dddd</td></tr>
+</tbody>
+</table>
+
+</body>
+</html>
