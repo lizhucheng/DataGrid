@@ -5079,3 +5079,5 @@ cb.biz.getInputData = function (viewModel) {
     inputData[tsName] = tsValue;
     return inputData;
 };
+
+cb.console._debug=true;
