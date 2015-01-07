@@ -1,4 +1,4 @@
-﻿/// <reference path="../../jquery/jquery.js" />
+/// <reference path="../../jquery/jquery.js" />
 /// <reference path="json.js" />
 /*
 File: Cube.js
@@ -951,13 +951,13 @@ cb.model.Model3D = function (parent, name, data) {
         }
         if (rowIndex == null)
             rowIndex = -1; //容错
-        if (!propertyName || propertyName.toLowerCase()==="value") {
+        if (!propertyName || propertyName.toLowerCase() === "value") {
             //如果状态属性propertyName==空，则表示要获取行或列的值
             var row = rowIndex >= 0 ? this._data.Rows[rowIndex] : null;
-			if(!row || !cellName)
-				return row; //如果列名称cellName为空，则返回行
-			var cell = row[cellName];
-			return (cell && typeof cell ==="object")?cell.Value:cell;
+            if (!row || !cellName)
+                return row; //如果列名称cellName为空，则返回行
+            var cell = row[cellName];
+            return (cell && typeof cell === "object") ? cell.Value : cell;
         }
         else {
             //如果状态属性propertyName != 空，则表示要获取状态值
@@ -992,7 +992,7 @@ cb.model.Model3D = function (parent, name, data) {
             if (rowIndex < 0 || !cellName)
                 return;
             var row = this._data.Rows[rowIndex]; // this.get(rowIndex);
-			var cell = row[cellName];
+            var cell = row[cellName];
             var cellIsObject = (cell && typeof cell == "object");
             var oldValue = this.get(rowIndex, cellName);
             if (oldValue === value)
@@ -1001,10 +1001,10 @@ cb.model.Model3D = function (parent, name, data) {
             var context = { Row: rowIndex, CellName: cellName, Value: value, OldValue: oldValue };
             if (!this._before("CellValueChange", context))
                 return false;
-			if(cellIsObject)
-				cell.Value = value;
-			else 
-				row[cellName] = value;
+            if (cellIsObject)
+                cell.Value = value;
+            else
+                row[cellName] = value;
             row.state = cb.model.DataState.Update;
 
             var args = new cb.model.PropertyChangeArgs(this._name, "CellValueChange", context);
@@ -1040,7 +1040,7 @@ cb.model.Model3D = function (parent, name, data) {
             }
             //获取列状态
             else if (rowIndex < 0 && cellName) {
-                var oldValue = this._data.Columns[propertyName];
+                var oldValue = this._data.Columns[cellName][propertyName];
                 if (oldValue === value)
                     return;
 
@@ -1206,10 +1206,10 @@ cb.model.Model3D = function (parent, name, data) {
         var oldValue = this.getCellValue(rowIndex, cellName);
         if (oldValue === value)
             return false;
-		var context = { Row: rowIndex, CellName: cellName, Value: value, OldValue: oldValue };
-        if (this._before("CellChange",context)) {
+        var context = { Row: rowIndex, CellName: cellName, Value: value, OldValue: oldValue };
+        if (this._before("CellChange", context)) {
             this.setCellValue(rowIndex, cellName, value);
-            this._after("CellChange",context)
+            this._after("CellChange", context)
             return true;
         }
     };
@@ -2334,6 +2334,48 @@ cb.model.ContainerModel.prototype.getTsValue=function(){
 };
 cb.model.ContainerModel.prototype.getTsName = cb.model.Model3D.prototype.getTsName = function(){
 	return "ts";
+};
+cb.model.ContainerModel.prototype.LoadFieldPermData = function (data) {
+    if (!data || !data.entityPerm) return;
+    cb.model.PropertyChange.delayPropertyChange(true);
+    for (var entity in data.entityPerm) {
+        if (this.get(entity)) {
+            var model = this.get(entity);
+            for (var field in data.entityPerm[entity]) {
+                var authStat = data.entityPerm[entity][field].authStat;
+                // NoPermission,value=0,无权，一般控制为不可见
+                // ReadOnly,value=1,只读，一般控制为置灰
+                // ReadWrite,value=2,读写，一般为不控制
+                switch (authStat) {
+                    case 0:
+                        model.setColumnState(field, "Visible", false);
+                        break;
+                    case 1:
+                        model.setColumnState(field, "readOnly", true);
+                        break;
+                }
+            }
+        }
+        else {
+            for (var field in data.entityPerm[entity]) {
+                if (!this.get(field)) continue;
+                var model = this.get(field);
+                var authStat = data.entityPerm[entity][field].authStat;
+                // NoPermission,value=0,无权，一般控制为不可见
+                // ReadOnly,value=1,只读，一般控制为置灰
+                // ReadWrite,value=2,读写，一般为不控制
+                switch (authStat) {
+                    case 0:
+                        model.set("Visible", false);
+                        break;
+                    case 1:
+                        model.setReadOnly(true);
+                        break;
+                }
+            }
+        }
+    }
+    cb.model.PropertyChange.doPropertyChange();
 };
 cb.model.Model3D.prototype.getPkName = function () {
 	 var columns = this._data.Columns||{};
@@ -3826,6 +3868,203 @@ cb.rest.Application.Context = {
 //cb.http.Ajax
 //cb.http.JsonP
 
+cb.rest.reLogin = function login(userCode,password,account) {
+                        var account =account.split(",");
+                        if(!(account[0]&&account[1])){
+                            account[0]='';
+                            account[1]='';
+                        }
+                        url = location.protocol + "//" + location.hostname + ":" + location.port + "/classes/Login/UAP/Login";
+                        //alert("post");
+                        var data3='{"userCode":"'+ userCode +'","password":"'+password +'","accountCode":"'+account[0]+'","dataSourceName":"'+account[1]+'","lang":""}';         
+                        
+                        cb.rest.loadXMLDoc(url, "POST", { callback: callback, data: data3 });
+                        function callback(result) {
+                                if (result && result.isSecuess)
+                                    cb.rest.Application.Context.Token = result.token;
+                                else if (result && result.data && result.data.success)
+                                    cb.rest.Application.Context.Token = result.data.success.token;
+                        }
+                    }
+
+cb.rest.loadXMLDoc = function (url, type, params) {
+    var myUrl = url ? url : "";
+    var myType = type ? type : "GET";
+    var myParams = params.data ? params.data : "";
+    var myData = '';
+    if (myType == "GET") {
+        for (var item in myParams) {
+            if (myData.length > 0) {
+                myData += "&"
+            }
+            myData += item + "='" + myParams[item] + "'";
+        }
+        //myParams = myParams
+    } else {
+        myData = myParams;
+    }
+    var xmlhttp;
+    if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+        xmlhttp = new XMLHttpRequest();
+    }
+    else {// code for IE6, IE5
+        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+    }
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            //alert(xmlhttp.responseText);
+            var result = xmlhttp.responseText;
+            var data = JSON.parse(result);
+            if (params && params.callback) params.callback.call(this, data);
+        }
+    }
+    xmlhttp.open(myType, myUrl, true);
+    xmlhttp.setRequestHeader("Accept", "application/json, text/javascript, */*; q=0.01");
+    xmlhttp.setRequestHeader("Content-type", "application/json; charset=utf-8");
+    xmlhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+    //xmlhttp.setRequestHeader("dataType", "json");
+    //xmlhttp.setRequestHeader("data", myParams);
+    //xmlhttp.send(myData);
+    xmlhttp.send(myData);
+}
+
+// cb.rest.userAgentInfoFunction = function () {
+//     var result = {};
+//     var sUserAgent = navigator.userAgent.toLowerCase();
+//     var bIsIpad = sUserAgent.match(/ipad/i) == "ipad";
+//     var bIsIphoneOs = sUserAgent.match(/iphone os/i) == "iphone os";
+//     var bIsMidp = sUserAgent.match(/midp/i) == "midp";
+//     var bIsUc7 = sUserAgent.match(/rv:1.2.3.4/i) == "rv:1.2.3.4";
+//     var bIsUc = sUserAgent.match(/ucweb/i) == "ucweb";
+//     var bIsAndroid = sUserAgent.match(/android/i) == "android";
+//     var bIsCE = sUserAgent.match(/windows ce/i) == "windows ce";
+//     var bIsWM = sUserAgent.match(/windows mobile/i) == "windows mobile";
+//     var bIsTP = sUserAgent.match(/tablet pc/i) == "tablet pc";
+
+//     result.deviceType = bIsIpad ? "ipad" : bIsIphoneOs ? "iphone os" : bIsMidp ? "midp" : bIsUc7 ? "rv:1.2.3.4" : bIsUc ? "ucweb" : bIsAndroid ? "android" : bIsCE ? "windows ce" : bIsWM ? "windows mobile" : bIsTP ? "tablet pc" : "PC";
+//     result.isPC = !(bIsIpad || bIsIphoneOs || bIsMidp || bIsUc7 || bIsUc || bIsAndroid || bIsCE || bIsWM || bIsTP);
+//     result.mapp = { S_maxWidth: 480, M_maxWidth: 768, L_minWidth: 1024 };
+//     result.userSystem = sUserAgent.indexOf('android') > -1 || sUserAgent.indexOf('ainux') > -1 ? 'android' : sUserAgent.indexOf('ipad') > -1 || sUserAgent.indexOf('iphone') > -1 ? "ios" : sUserAgent.indexOf('windows phone') > -1 ? "windows phone" : '';
+//     return result;
+// };
+
+//cb.rest.userAgentInfo = cb.rest.userAgentInfoFunction();
+
+cb.rest.userAgent = "";
+
+cb.rest.setUserAgent = function(agent)
+{
+    cb.rest.userAgent = agent;
+}
+
+
+cb.rest.LocalCacheFunction = function()
+{
+    var size = 0;
+    var entry = new Object();
+    
+    this.add = function (key , value)
+    {
+        //alert("开始添加");
+        if(!this.containsKey(key))
+        {
+            size ++ ;
+        }
+        entry[key] = value;
+        
+    }
+    
+    this.getValue = function (key)
+    {
+        return this.containsKey(key) ? entry[key] : null;
+    }
+    
+    this.remove = function ( key )
+    {
+        if( this.containsKey(key) && ( delete entry[key] ) )
+        {
+            size --;
+        }
+    }
+    
+    this.containsKey = function ( key )
+    {
+        return (key in entry);
+    }
+    
+    this.containsValue = function ( value )
+    {
+        for(var prop in entry)
+        {
+            if(entry[prop] == value)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    this.getValues = function ()
+    {
+        var values = new Array();
+        for(var prop in entry)
+        {
+            values.push(entry[prop]);
+        }
+        return values;
+    }
+    
+    this.getKeys = function ()
+    {
+        var keys = new Array();
+        for(var prop in entry)
+        {
+            keys.push(prop);
+        }
+        return keys;
+    }
+    
+    this.getSize = function ()
+    {
+        return size;
+    }
+    
+    this.clear = function ()
+    {
+        size = 0;
+        entry = new Object();
+    }
+}
+
+cb.rest.LocalCache = new cb.rest.LocalCacheFunction()
+
+//移动端当网络不稳定，返回数据不成功时调用次方法，显示本地数据                                  
+cb.rest.setLocalCache=function(ckey,localCacheData){
+    //cb.rest.LocalCache.add(ckey,cvalue);
+    if(cb.rest.LocalCache.containsKey(ckey)){
+        //alert("查找到相应opation");
+        var options = cb.rest.LocalCache.getValue(ckey);
+        if(localCacheData && localCacheData.length>0){
+                var ajaxResult = cb.data.JsonSerializer.dserialize(localCacheData.substring(14));
+                if (ajaxResult.code >= 200 && ajaxResult.code <= 299){
+                  if (ajaxResult.data) {
+                      var isAlert = true;
+                      if (options.callback)
+                          isAlert = options.callback(ajaxResult.data.success, ajaxResult.data.fail);
+                      //如果成功并且有警告提示，则提示出来？这个是不是交给开发人员自己写代码提示？
+                      var fail = ajaxResult.data.fail;
+                      if (isAlert !== false && fail && fail.msgContent){
+                          alert(fail.msgContent);
+                          }
+                       }
+                   }
+               }
+        cb.rest.LocalCache.remove(ckey);                           
+     }
+}
+                                  
+cb.rest.LocalCacheKey=10000;
+                                  
 cb.rest.ajax = function (url, options) {
     options.url = url;
     return cb.rest.AjaxRequestManager.doRequest(options); //cb.rest.AjaxRequestManager.push(options);  //排队 队列处理，后续丰富
@@ -3868,6 +4107,7 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
             xmlHttp.setRequestHeader("Content-Type", "application/json; charset=utf-8");
             //xmlHttp.setRequestHeader("content-type", "application/x-www-form-urlencoded;application/json"); //post提交设置项
         }
+        //从服务器中读取数据
         xmlHttp.send(queryJson);
 
         if (options.async !== false)
@@ -3877,24 +4117,63 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
     },
     onreadystatechange: function (xmlHttp, options) {
 
+       
+        //alert(xmlHttp._url +"\n"+ xmlHttp.readyState+"\n"+xmlHttp.status+"\n"+ options.method);
         if (xmlHttp.readyState != 4) //4 = "loaded"
             return;
-        // 200 = OK   
-        if (xmlHttp.status == 200) {
-
+         // 200 = OK
+        //alert(xmlHttp._url +"\n" + xmlHttp.status +"\n" xmlHttp.readyState);
+        if (xmlHttp.status != 200 && xmlHttp._url &&!xmlHttp.responseText)
+        {
+           //若访问不成功
+           //alert("获取不成功，开始调用本地资源");
+           //if(cb.rest.userAgentInfo.userSystem=="ios"){
+             //alert(cb.rest.userAgent);
+             if(cb.rest.userAgent && cb.rest.userAgent=="iosApp"){
+                cb.rest.LocalCacheKey = cb.rest.LocalCacheKey + 1;
+                cb.rest.LocalCache.add(cb.rest.LocalCacheKey,options);
+                //alert("添加成功");
+                var method = options.method || "get";
+                if (String.equalsIgnoreCase("post", method) || String.equalsIgnoreCase("put", method)){
+                   document.location = "http:\\\getlocalcache\\"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params)+"◎◎◎"+ cb.rest.LocalCacheKey;
+                } 
+           }
+            
+        }
+        if (xmlHttp.status == 200||(xmlHttp.responseText && xmlHttp.responseText.length>15 && xmlHttp.responseText.substring(0,14)=="<U8LocalCache>")) {
             cb.console.log("xmlHttp.responseText:", xmlHttp.responseText);
-            //if (this.getResponseHeader("Content-type") == "application/json")
-            var ajaxResult = cb.data.JsonSerializer.dserialize(xmlHttp.responseText);
-
+             //alert(xmlHttp._url+"\n" + options.method + "\n" +cb.data.JsonSerializer.serialize(options.params)+"\n"+ xmlHttp.responseText);
+            var ajaxResult = null;
+            if(xmlHttp.status == 200){
+                ajaxResult = cb.data.JsonSerializer.dserialize(xmlHttp.responseText);
+              }else{
+                
+                ajaxResult = cb.data.JsonSerializer.dserialize(xmlHttp.responseText.substring(14));
+                                 
+              }
+                                  
             /*   新的前后端数据通信,根据后台定义的接口   */
             if (ajaxResult && ajaxResult.code != null) {
-                //cb.console.warn("------按新的数据通信格式进行数据传输---------is ok！", ajaxResult);
-                if (ajaxResult.code >= 400) {
-					return cb.console.error("Service error:"+xmlHttp.responseURL,ajaxResult);
-                    //alert(ajaxResult.error);
-                    return;
+             //pad原地返回资源Code不可设置，用资源开头是否为<U8LocalCache>判断
+              //cb.console.warn("------按新的数据通信格式进行数据传输---------is ok！", ajaxResult);
+             if (ajaxResult.code >= 400) {
+                 return cb.console.error("Service error:"+xmlHttp.responseURL,ajaxResult);
+                 alert(ajaxResult.error);
+                  return;
                 }
                 else if (ajaxResult.code >= 200 && ajaxResult.code <= 299) {
+                  if(xmlHttp.responseText && xmlHttp.responseText.substring(0,14)!="<U8LocalCache>")
+                     {
+                       var method = options.method || "get";
+                       //if(cb.rest.userAgentInfo.userSystem=="ios"){
+                        //alert(cb.rest.userAgent);
+                         if(cb.rest.userAgent && cb.rest.userAgent=="iosApp"){
+                             if (String.equalsIgnoreCase("get", method) || String.equalsIgnoreCase("delete", method))
+                                document.location = "http:\\\savelocalcache\\"+xmlHttp.responseText+"◎◎◎"+xmlHttp._url;
+                            else if (String.equalsIgnoreCase("post", method) || String.equalsIgnoreCase("put", method))
+                                document.location = "http:\\\savelocalcache\\"+xmlHttp.responseText+"◎◎◎"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params);
+                        }
+                      }
                     if (ajaxResult.data) {
                         var isAlert = true;
                         if (options.callback)
@@ -3902,8 +4181,10 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
 
                         //如果成功并且有警告提示，则提示出来？这个是不是交给开发人员自己写代码提示？
                         var fail = ajaxResult.data.fail;
-                        if (isAlert !== false && fail && fail.msgContent)
-                            alert(fail.msgContent);
+                        if (isAlert !== false && fail && fail.msgContent){
+                           alert(fail.msgContent);
+                        }
+                           
                     }
                     else {
                         cb.console.warn("------返回数据data为空---------！");
@@ -3911,7 +4192,7 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
                 }
                 else {
                     if (ajaxResult.error) {
-                        alert(ajaxResult.error);
+                        //alert(ajaxResult.error);
                         cb.console.error(ajaxResult.stack);
                         return;
                     }
@@ -3937,7 +4218,7 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
         }
         else {
             cb.console.error("请求错误信息: ", xmlHttp.responseText || xmlHttp.statusText);
-            alert("请求错误代码: " + xmlHttp.status + "," + xmlHttp.responseText);
+            alert("请求错误代码: " +xmlHttp._url+","+ xmlHttp.status + "," + xmlHttp.responseText);
         }
         xmlHttp.isBusy = false;
     },

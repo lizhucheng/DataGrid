@@ -100,7 +100,7 @@ cb.binding.ReferBinding = function (mapping, parent) {
             };
             var parentViewModel = cb.cache.get(parentViewModelName);
             if (!parentViewModel) return;
-            parentViewModel.loadPageView("common.refer.ReferApp", { queryString: { refCode: refCode} });
+            parentViewModel.loadPageView("common.refer.ReferApp", { queryString: { refCode: refCode } });
         };
 
         this._onchange = function (refReturnData) {
@@ -174,7 +174,8 @@ cb.binding.ReferBinding.prototype._set_value = function (control, propertyValue)
     }
 
     var displayText = (showMode === "Code" ? codeValue : (showMode === "CodeName" ? ("(" + codeValue + ")" + nameValue) : nameValue));
-    control.setValue(propertyValue, displayText || propertyValue);
+    if (propertyValue == null) control.setValue(propertyValue, propertyValue);
+    else control.setValue(propertyValue, displayText || propertyValue);
 };
 
 cb.binding.DateTimeBoxBinding = function (mapping, parent) {
@@ -204,18 +205,10 @@ cb.binding.DateTimeBoxBinding.prototype.initData = function () {
 
 cb.binding.ComboBoxBinding = function (mapping, parent) {
     cb.binding.BaseBinding.call(this, mapping, parent);
-
-    this._onItemSelect = function (obj) {
-        var model = this.getModel();
-        if (!model) return;
-        typeof obj == "object" ? model.setValue(obj.value) : model.setValue(obj);
-    };
-
-    this._onChange = function (val) {
+    this._onclick = function (val) {
         var model = this.getModel();
         if (!model) return;
         model.setValue(val);
-        model.fireEvent("change", model);
     };
 
     this.applyBindings = function () {
@@ -223,26 +216,13 @@ cb.binding.ComboBoxBinding = function (mapping, parent) {
         var control = this.getControl();
         if (!model || !control) return;
         if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay) {
-            control.un("onItemSelect", this._onItemSelect);
-            control.on("onItemSelect", this._onItemSelect, this);
-            control.un("change", this._onChange);
-            control.on("change", this._onChange, this);
+            control.un("changeValue", this._onchange);
+            control.on("changeValue", this._onchange, this);
         }
         model.addListener(this);
     };
 };
 cb.binding.ComboBoxBinding.prototype = new cb.binding.BaseBinding();
-cb.binding.ComboBoxBinding.prototype.initData = function () {
-    var model = this.getModel();
-    var control = this.getControl();
-    if (!model || !control) return;
-    var val;
-    if (model._data["defaultValue"]) val = parseInt(model._data["defaultValue"]);
-    if (model._data["value"]) val = parseInt(model._data["value"]);
-    val = isNaN(val) ? (model._data["defaultValue"] || model._data["value"]) : val;
-    model.setValue(val);
-    if (control.setData) control.setData(model._data);
-};
 
 cb.binding.TreeBinding = function (mapping, parent) {
     cb.binding.BaseBinding.call(this, mapping, parent);
@@ -737,7 +717,6 @@ cb.binding.RejectListBinding = function (mapping, parent) {
         if (!model) return;
         model.setValue(args);
     };
-
     this.applyBindings = function () {
         var model = this.getModel();
         var control = this.getControl();
@@ -750,6 +729,31 @@ cb.binding.RejectListBinding = function (mapping, parent) {
     };
 }
 cb.binding.RejectListBinding.prototype = new cb.binding.BaseBinding();
+
+cb.binding.PermissionPersonListBinding = function (mapping, parent) {
+    cb.binding.BaseBinding.call(this, mapping, parent);
+
+    this._addRow = function (args) {
+        var model = this.getModel();
+        if (!model) return;
+    }
+
+    this._rowClicked = function (args) {
+        var model = this.getModel();
+        if (!model) return;
+    }
+    this.appleBindings = function () {
+        var model = this.getModel();
+        var control = this.getControl();
+        if (!model || !control) return;
+        if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay) {
+            control.on("rowClicked", this._rowClicked, this);
+            control.on("addRow", this._addRow, this);
+        }
+        model.addListener(this);
+    }
+}
+cb.binding.PermissionPersonListBinding.prototype = new cb.binding.BaseBinding();
 
 cb.binding.SimpleListBinding = function (mapping, parent) {
     cb.binding.BaseBinding.call(this, mapping, parent);
@@ -892,123 +896,3 @@ cb.binding.StatusBinding.prototype.initData = function () {
     if (val != null) model.setValue(val);
     if (control.setData) control.setData(model._data);
 };
-
-//覆盖DataGridBinding 
-cb.binding.DataGridBinding = function (mapping, parent) {
-    cb.binding.BaseBinding.call(this, mapping, parent);
-/*
-    this._onCellChange = function (rowIndex, cellName, cellValue) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.cellChange) model.cellChange(rowIndex, cellName, cellValue);
-    };
-
-    this._onSort = function (args) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.sort) {
-            if (!args) model.sort();
-            else model.sort(args["field"], args["direction"]);
-        }
-    };
-
-    this._onSelectedRowsChanged = function (selectedRows) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.onSelect) model.onSelect(selectedRows);
-    };
-
-    this._onAddNewRow = function (rowIndex) {
-        var model = this.getModel();
-        if (!model) return;
-        if (rowIndex == null) rowIndex = model.getRows().length;
-        if (model.insert) model.insert(rowIndex);
-    };
-
-    this._onDeleteRows = function (rowIndexes) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.remove) model.remove(rowIndexes);
-    };
-
-    this._onShowCardView = function () {
-        var model = this.getModel();
-        var control = this.getControl();
-        if (!model || !control) return;
-        control.showCardView(model);
-    };
-
-    this._onCellEditorLoad = function (column, controlId) {
-        var model = this.getModel();
-        if (!model) return;
-        var viewBinding = this._getEditRowModelContainerBinding(model.getEditRowModel());
-        viewBinding.add({ controlId: controlId, controlType: column.columnType, propertyName: column.id, bindingMode: "TwoWay" });
-    };
-
-    this._onCellEditorDestroy = function (controlId) {
-        var model = this.getModel();
-        if (!model) return;
-        var viewBinding = this._getEditRowModelContainerBinding(model.getEditRowModel());
-        viewBinding.remove(controlId);
-    };
-
-    this._getEditRowModelContainerBinding = function (viewModel) {
-        this._editRowModelContainerBinding = this._editRowModelContainerBinding || cb.viewbinding.create("cell", viewModel);
-        return this._editRowModelContainerBinding;
-    };
-
-    this._onChangePage = function (pageSize, pageIndex) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.onChangePage) model.onChangePage(pageSize, pageIndex);
-    };
-
-    this._onActiveRowClick = function (args) {
-        var model = this.getModel();
-        if (!model || !model.fireEvent) return;
-        var activeRowIndex = args.row;
-        if (activeRowIndex == null) return;
-        var activeRow = model.getRows()[activeRowIndex];
-        if (!activeRow) return;
-        model.fireEvent("onActiveRowClick", activeRow);
-    };
-
-    this._onQuerySchemeChanged = function (args) {
-        var model = this.getModel();
-        if (!model || !model.fireEvent) return;
-        model.fireEvent("onQuerySchemeChanged", args);
-    };
-
-    this.applyBindings = function () {
-        var model = this.getModel();
-        var control = this.getControl();
-        if (!model || !control) return;
-        if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay) {
-            control.un("onCellChange", this._onCellChange);
-            control.on("onCellChange", this._onCellChange, this);
-            control.un("onSort", this._onSort);
-            control.on("onSort", this._onSort, this);
-            control.un("onSelectedRowsChanged", this._onSelectedRowsChanged);
-            control.on("onSelectedRowsChanged", this._onSelectedRowsChanged, this);
-            control.un("onAddNewRow", this._onAddNewRow);
-            control.on("onAddNewRow", this._onAddNewRow, this);
-            control.un("onDeleteRows", this._onDeleteRows);
-            control.on("onDeleteRows", this._onDeleteRows, this);
-            control.un("onShowCardView", this._onShowCardView);
-            control.on("onShowCardView", this._onShowCardView, this);
-            control.un("onCellEditorLoad", this._onCellEditorLoad);
-            control.on("onCellEditorLoad", this._onCellEditorLoad, this);
-            control.un("onCellEditorDestroy", this._onCellEditorDestroy);
-            control.on("onCellEditorDestroy", this._onCellEditorDestroy, this);
-            control.un("onChangePage", this._onChangePage);
-            control.on("onChangePage", this._onChangePage, this);
-            control.un("onActiveRowClick", this._onActiveRowClick);
-            control.on("onActiveRowClick", this._onActiveRowClick, this);
-            control.un("onQuerySchemeChanged", this._onQuerySchemeChanged);
-            control.on("onQuerySchemeChanged", this._onQuerySchemeChanged, this);
-        }
-        model.addListener(this);
-    };
-	*/
-};
-cb.binding.DataGridBinding.prototype = new cb.binding.BaseBinding();
