@@ -1,58 +1,59 @@
-console._debug=true;
+﻿console._debug=true;
 
-//DataGridʵ���ڲ�ά���ؼ�״̬��Ϣ�Լ���ҳ���ݣ�datasource��,model�ڲ�ά����Ҫ��״̬��Ϣ������ͷ�����������
-//�ؼ��е����ݸ��ݶ����ӳ��Լ����model�е�row���ݹ���
-//model�Ϳؼ�֮��ͨ��������Ϣ����ͬ��
+//DataGrid实例内部维护控件状态信息以及单页数据（datasource）,model内部维护需要的状态信息并负责和服务器交互，
+//控件中的数据根据定义的映射约定和model中的row数据关联
+//model和控件之间通过互发消息保持同步
 
-//���ڲ��Ե�DataGridʵ�����ö���
+//用于测试的DataGrid实例配置定义
 var options={
-		//���Ƿ�ɱ༭��grid������ֻֻ����չʾ���ݣ��༭����Ҳ�������ṩ�༭;�����ڱ༭��ˢ����ʾ��
-		//�ڱ༭̬ʱ����ӦһЩ�����¼��������̬ʱ��������
-		editable:fasle,	
-		showCheckBox:true,	//�Ƿ���ʾcheckbox��
-		showRowNo:true,		//�Ƿ���ʾ�к�
-		//�����еĶ���
-		fieldNms:['title','duration','percentComplete','start','finish','effortDriven'],//˵�������ֶε���ʾ˳��
-		fields:{
-			//�ж���
-			'title':{
-				title:'title',	//��ͷ��ʾ���ı�
-				visible:true,	//���Ƿ�ɼ�
-				resizable:true,	//���Ƿ���϶��ı��п�
-				textAlign:TextAlign.LEFT,	//���ı�ˮ�ַ�����뷽ʽ
-				headerTextAlign:TextAlign.CENTER,	//��ͷ�ı�ˮƽ���뷽ʽ��Ĭ�Ͼ���
-				width:120,	//����
-				cssCls:'',	//�в�ε���ʽ���壨ͨ��ָ��class��css�ж������ʽ������
+		//表是否可编辑（grid本质上只只读的展示数据，编辑功能也不过是提供编辑途径，在编辑后刷新显示）
+		//在编辑态时会响应一些交互事件，而浏览态时往往不会
+		editable:false,	
+		showCheckBox:true,	//是否显示checkbox列
+		showRowNo:true,		//是否显示行号
+		//所有列的定义(有序)
+		fields:[
+			//列定义
+			{
+				$name:'title',
+				title:'title',	//表头显示的文本
+				visible:true,	//列是否可见
+				resizable:true,	//列是否可拖动改变列宽
+				textAlign:'left',	//列文本水分方向对齐方式
+				headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
+				width:120,	//宽度
+				cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 				colStyle:function(index){},
 				onclick:function(){}
 			},
-			'duration':{
+			{
+				$name:'duration',
 				title:'duration'
 			},
-			'percentComplete':{
-				title:'percentComplete'
+			{
+				$name:'percentComplete'
 			},
-			'start':{
-				title:'start'
+			{
+				$name:'start'
 			},
-			'finish':{
-				title:'finish'
+			{
+				$name:'finish'
 			},
-			'effortDriven':{
-				title:'effortDriven'
+			{
+				$name:'effortDriven'
 			}
-		},
-		frozenIndex:0,	//����������������е������ã��������к��к�checkbox�У�
+		],
+		frozenCol:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
 		
-		//�ṩgrid����϶�����ʽ���ƻ��ƣ��ɸ������������������������ʽ���ƣ���ÿ�����иı䣨grid��ͼ�ϵĸı䣬�������ƶ��������ݸĶ���ʱ��Ҫ������Ⱦ��
-		//Լ��ͨ��rowStyler����ʱֻ��ͨ������class������ʽ����class����ǰ׺ "rowStyler-"��
-		//cellStyler���� class����ǰ׺"cellStyler-"
-		rowStyler:function(rowNo,record){},//rowNoΪ����ţ�recordΪ�����ݼ�¼��json����
+		//提供grid层次上对行样式控制机制（可根据行序和行数据特征进行样式控制），每次有行改变（grid视图上的改变，包括行移动和行内容改动）时都要重新渲染。
+		//约定通过rowStyler设置时只能通过设置class关联样式，且class名带前缀 "rowStyler-"；
+		//cellStyler类似 class名带前缀"cellStyler-"
+		rowStyler:function(rowNo,record){},//rowNo为行序号，record为行数据记录（json对象）
 		cellStyler:function(rowNo,colNo){},
 	};
 
 var data=[];
-var rowCount=500;
+var rowCount=3;
 for (var i = 0; i <rowCount ; i++) {
   data[i] = {
 	title: "Task " + i,

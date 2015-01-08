@@ -108,15 +108,15 @@ $(function () {
 		//frozen cols
 		arr1[j++]='<tr>';
 		if(showRowNo){
-			arr1[j++]='<th class="rowNoCol" data-field="'+fields[i]+'">';
+			arr1[j++]='<td class="rowNoCol" data-field="'+fields[i]+'">';
 			arr1[j++]=data[i][fields[s]];
-			arr1[j++]='</th>';
+			arr1[j++]='</td>';
 			s++;
 		}
 		if(showCheckBox){
-			arr1[j++]='<th class="chkCol" data-field="'+fields[i]+'">';
+			arr1[j++]='<td class="chkCol" data-field="'+fields[i]+'">';
 			arr1[j++]='<input type="checkbox" />'
-			arr1[j++]='</th>';
+			arr1[j++]='</td>';
 			s++;
 		}
 		for(;s<=frozenColIndex;s++){
