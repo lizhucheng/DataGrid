@@ -106,7 +106,7 @@ DataGrid.prototype={
 			this._nameColMap[cols[i][FIELDNAME_PROP]]=cols[i];
 		}
 	},
-	getCol:function(field){
+	getColumn:function(field){
 		return this._nameColMap[field];
 	},
 	init:function(opts){
@@ -129,7 +129,7 @@ DataGrid.prototype={
 	},
 	//只设置状态，不改变视图
 	_setFrozenCol:function(field){
-		var col=this.getCol(field);
+		var col=this.getColumn(field);
 		if(field==DataGrid.ROWNOCOL[FIELDNAME_PROP] || field==DataGrid.ROWNOCOL[FIELDNAME_PROP])return;
 		if(col){
 			this.frozenCol=field;
@@ -145,21 +145,21 @@ DataGrid.prototype={
 		
 		var diff=index-original;
 		if(diff){
-			this._moveCol(diff);
+			this._moveColumn(diff);
 			this._fixMarginLeft();
 		}
 	},
-	frozeCol:function(field){
+	frozeColumn:function(field){
 		var original=this.frozenIndex;
 		this._setFrozenCol(field);
 		var diff=this.frozenIndex-original;
 		if(diff){
-			this._moveCol(diff);
+			this._moveColumn(diff);
 			this._fixMarginLeft();
 		}
 	},
 	//左右两个视图中列之间的移动操作（把左边的最后面的指定列数移动到右边，把右边的前面的列移动到左边的最后），用于实现固定列操作辅组方法
-	_moveCol:function(count){
+	_moveColumn:function(count){
 		if(!count)return;
 		var ltr=!!(count<0);
 		count=Math.abs(count);
@@ -357,7 +357,7 @@ DataGrid.prototype={
 			col=field;
 			field=col[FIELDNAME_PROP];}
 		else{
-			col=this.getCol(field);
+			col=this.getColumn(field);
 		}
 		if(!col){
 			throw('expection message:列'+field+'不存在!');
