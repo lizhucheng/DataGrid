@@ -7,7 +7,7 @@ $.extend(true, window, {
 	}
 });
 //随机背景，用于测试
-var COLORS=['#ff0','#fea','#0fe','#123'];
+var COLORS=['#ff0','#fea','#0fe','#0ff'];
 //Enum/~
 //DataGrid.TextAlign={'LEFT':'left','RIGHT':'right','CENTER':'center'},
 //DataGrid.VAlign={'TOP':'top','MIDDLE':'middle','BOTTOM':'bottom'};
@@ -283,34 +283,38 @@ DataGrid.prototype={
 		var col=this._nameColMap[field];
 		return col?this.cols.indexOf(col) : -1;
 	},
-	hideColumn:function(field){
+	
+	_setColVisible:function(field,visible){
 		var index=this._getColIndex(field);
-		if(index>-1&&this.cols[index].visible){
-			this.cols[index].visible=false;
+		visible=!!visible;
+		var display=visible?'':'none';
+		//列存在且要设置的visible状态和当前状态不一致时才处理
+		if(index>-1&&this.cols[index].visible!==visible){
+			this.cols[index].visible=visible;
 			
-			var trs='.header1 tr,.content1 tr';
+			var tables='.header1>table,.content1>table';
 			if(index>this.frozenIndex){
 				index=index-this.frozenIndex-1;
-				trs='.header2 tr,.content2 tr';
+				tables='.header2>table,.content2>table';
 			}		
-			$('>td:eq('+index+')',this.$el.find(trs)).hide();
+			this.$el.find(tables).each(function(i,el){
+				//table.rows并不是数组，而是一个HTMLCollection对象，所以不能直接用数组的迭代方法
+				Array.prototype.slice.call(el.rows,0).every(function(tr,i){
+					tr.cells[index].style.display=display;
+				});
+			});
 			this._fixMarginLeft();
 		}
-		
 	},
 	showColumn:function(field){
-		var index=this._getColIndex(field);
-		if(index>-1&&!this.cols[index].visible){
-			this.cols[index].visible=true;
-			
-			var trs='.header1 tr,.content1 tr';
-			if(index>this.frozenIndex){
-				index=index-this.frozenIndex-1;
-				trs='.header2 tr,.content2 tr';
-			}		
-			$('>td:eq('+index+')',this.$el.find(trs)).show();
-			this._fixMarginLeft();
-		}
+		this._setColVisible(field,true);
+	},
+	hideColumn:function(field){
+		this._setColVisible(field,false);
+	},
+	_toggleColumn:function(field){//方便测试时使用
+		var col=this._nameColMap[field];
+		this._setColVisible(field,col&&!col.visible);
 	},
 	_getFrozenWidth:function(){
 		var width=0,cols=this.cols,i=0,hasFrozenCol=false;
