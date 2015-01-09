@@ -300,7 +300,7 @@ DataGrid.prototype={
 			}		
 			this.$el.find(tables).each(function(i,el){
 				//table.rows并不是数组，而是一个HTMLCollection对象，所以不能直接用数组的迭代方法
-				Array.prototype.slice.call(el.rows,0).every(function(tr,i){
+				Array.prototype.slice.call(el.rows,0).forEach(function(tr,i){
 					tr.cells[index].style.display=display;
 				});
 			});
