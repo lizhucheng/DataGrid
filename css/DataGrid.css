@@ -7,7 +7,7 @@
 .grid thead td{
 	height:20px;
 }
-
+.grid  tr td{height:20px;}
 .grid table{
 	table-layout:fixed;
 	width:10px;
@@ -37,7 +37,7 @@
 .content2{
 	background-color:green;
 }
-.grid thead th{
+.grid thead>tr>td{
 	position:relative;
 }
 .grid th.rowNoCol{
@@ -81,6 +81,8 @@
 
 .nowrap>div>table>tbody>tr>td{
 	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
 }
 /*col-resizer*/
 .col-resizer{

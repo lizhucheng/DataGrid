@@ -204,7 +204,16 @@ DataGrid.prototype={
 		});
 		$('.content2',view).css('margin-left',this._getFrozenWidth()+'px');
 		$el.append(view);
+		
+		this._initEvents();
+		
+		view=null;
+		if(data instanceof Array){this.loadData(data);}
+	},
+	_initEvents:function(){
 		//固定列实现
+		var view=this.$el.find('.view');
+		var dg=this;
 		view.scroll(function(){
 			//console.log(this.scrollLeft);
 			$('.content1',this).get(0).style.left=this.scrollLeft+'px';
@@ -212,8 +221,34 @@ DataGrid.prototype={
 			$('.veiwHeader',this)[0].style.marginLeft=this.scrollLeft+'px';
 			$('.veiwHeader',this)[0].style.top=this.scrollTop+'px';
 		});
-		view=null;
-		if(data instanceof Array){this.loadData(data);}
+		
+		//拖动调整列宽
+		$('.header .col-resizer',view).drag('drag',function(ev, dd){
+			$(this).css('right',-6-dd.deltaX);
+			
+		}).drag('draginit',function(ev, dd){
+			$(this).addClass('active');
+			
+			var left=dd.offsetX-$('.view .viewBody',dg.$el).offset().left+6;
+			$('.view .refLine',dg.$el).css('left',left);
+			$('.view .refLine',dg.$el).show();
+		}).drag('drag',function(ev, dd){
+			//实时显示参照线
+			var left=dd.offsetX-$('.view .viewBody',dg.$el).offset().left+6;
+			$('.view .refLine',dg.$el).css('left',left);
+			
+		}).drag('dragend',function(ev, dd){
+			$(this).addClass('active');
+			var $col=$(this).closest('[data-field]');
+			var field=$col.data('field');
+			var colWidth=Number.parseInt($col[0].style.width);//此处不能用col.width();chrome中获取通过这种方式获取宽度时有问题。
+			var width=dd.deltaX+colWidth;//避免宽度设置为负数
+			console.log('field,width:',field,',',width);
+			dg.setColWidth(field,width);
+			$(this).css('right',-6);
+			$(this).removeClass('active');
+			$('.view .refLine',dg.$el).hide();
+		});
 	},
 	//显示数据行
 	loadData:function(data){
@@ -225,6 +260,57 @@ DataGrid.prototype={
 		$('.viewBody .content1 tbody',$el).html(frozenCols);
 		$('.viewBody .content2 tbody',$el).html(otherCols);
 		$('.viewBody').show();
+	},
+	setColWidth:function(field,width){
+		if(!this._nameColMap[field])return;
+		
+		
+		//改变表头宽度
+		width=Math.max(50,width);//避免列太窄
+		//var delta=width-$('[data-field='+field+']').width();
+		var delta=width-Number.parseInt($('.header [data-field='+field+']:eq(0)',this.$el)[0].style.width);
+		$('[data-field='+field+']:eq(0)',this.$el.find('.header,.viewBody')).width(width);
+		
+		var index=this.cols.indexOf(this._nameColMap[field]);
+		//更新列width属性
+		this.cols[index].width=width;
+		//如果列为固定列，这调整可滚动区的margin-left
+		if(index<=this.frozenIndex){
+			this._fixMarginLeft();
+		}
+	},
+	_getColIndex:function(field){
+		var col=this._nameColMap[field];
+		return col?this.cols.indexOf(col) : -1;
+	},
+	hideColumn:function(field){
+		var index=this._getColIndex(field);
+		if(index>-1&&this.cols[index].visible){
+			this.cols[index].visible=false;
+			
+			var trs='.header1 tr,.content1 tr';
+			if(index>this.frozenIndex){
+				index=index-this.frozenIndex-1;
+				trs='.header2 tr,.content2 tr';
+			}		
+			$('>td:eq('+index+')',this.$el.find(trs)).hide();
+			this._fixMarginLeft();
+		}
+		
+	},
+	showColumn:function(field){
+		var index=this._getColIndex(field);
+		if(index>-1&&!this.cols[index].visible){
+			this.cols[index].visible=true;
+			
+			var trs='.header1 tr,.content1 tr';
+			if(index>this.frozenIndex){
+				index=index-this.frozenIndex-1;
+				trs='.header2 tr,.content2 tr';
+			}		
+			$('>td:eq('+index+')',this.$el.find(trs)).show();
+			this._fixMarginLeft();
+		}
 	},
 	_getFrozenWidth:function(){
 		var width=0,cols=this.cols,i=0,hasFrozenCol=false;
