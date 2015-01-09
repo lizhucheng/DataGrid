@@ -117,12 +117,13 @@ DataGrid.prototype={
 		this.cols=createColumns(fields);
 		
 		//检查是否有行号列、checkbox列
+		if(this.showCheckBox){
+			this.cols.unshift(new Column(DataGrid.CHECKBOXCOL));
+		}
 		if(this.showRowNo){
 			this.cols.unshift(new Column(DataGrid.ROWNOCOL));	
 		}
-		if(this.showCheckBox){
-			this.cols.unshift(new Column(DataGrid.CHECKBOXCOL));
-		}	
+		
 		this._rebuildColMap();
 		this._setFrozenCol(this.frozenCol||'');
 	},
@@ -181,7 +182,7 @@ DataGrid.prototype={
 			$to=temp;
 			index=$from.first().find('>td').length-count-1;
 			select='td:gt('+index+')';
-			if(index=-1){select='td';}//jQuery 使用:gt(-1)会出问题
+			if(index==-1){select='td';}//jQuery 使用:gt(-1)会出问题
 			insertTo='prependTo';
 		}
 		
@@ -362,11 +363,11 @@ DataGrid.prototype={
 			throw('expection message:列'+field+'不存在!');
 		};
 		
-		if(col[FIELDNAME_PROP]===DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
-			return '<td class="rowNoCol chkAll" style="width:'+col.width+'px;" data-field="'+field+'"></td>';
-		}
 		if(col[FIELDNAME_PROP]===DataGrid.ROWNOCOL[FIELDNAME_PROP]){
-			return '<td class="chkCol" style="width:'+col.width+'px;" data-field="'+field+'"><input type="checkbox" /></td>';
+			return '<td class="rowNoCol" style="width:'+col.width+'px;" data-field="'+field+'"></td>';
+		}
+		if(col[FIELDNAME_PROP]===DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
+			return '<td class="chkCol chkAll" style="width:'+col.width+'px;" data-field="'+field+'"><input type="checkbox" /></td>';
 		}
 		
 		var arr=new Array(10);
@@ -400,7 +401,7 @@ DataGrid.prototype={
 				field=cols[i][FIELDNAME_PROP];
 				if(field!=DataGrid.ROWNOCOL[FIELDNAME_PROP]&&field!=DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
 					value=row[field];
-				}else if(field!=DataGrid.ROWNOCOL[FIELDNAME_PROP]){
+				}else if(field===DataGrid.ROWNOCOL[FIELDNAME_PROP]){
 					value=s+1;
 				}else{
 					value='<input type="checkbox" />'
