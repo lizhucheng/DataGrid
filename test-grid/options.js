@@ -11,6 +11,7 @@ var options={
 		editable:false,	
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
+		multiSort:true,		//是否支持多列排序，默认true
 		//所有列的定义(有序)
 		fields:[
 			//列定义
@@ -22,6 +23,7 @@ var options={
 				textAlign:'left',	//列文本水分方向对齐方式
 				headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 				width:120,	//宽度
+				sortable:true,	//默认false
 				cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 				colStyle:function(index){},
 				onclick:function(){}

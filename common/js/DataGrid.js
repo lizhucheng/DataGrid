@@ -11,7 +11,9 @@ var COLORS=['#ff0','#fea','#0fe','#0ff'];
 //Enum/~
 //DataGrid.TextAlign={'LEFT':'left','RIGHT':'right','CENTER':'center'},
 //DataGrid.VAlign={'TOP':'top','MIDDLE':'middle','BOTTOM':'bottom'};
-	
+
+//可排序的列有三种排序状态，递增，递减，不排序
+DataGrid.SortStatus={'ASC':'asc','DESC':'desc','NONE':''};	
 //Enum~/
 
 //定义存储列标识的属性名称
@@ -33,6 +35,7 @@ Column.prototype={
 	textAlign:'left',	//列文本水分方向对齐方式
 	headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 	width:120,	//宽度
+	sortable:false,
 	//defaults~/
 	
 	//getName:function(){return this.[FIELDNAME_PROP];},//不提供这个方法了，直接使用this.[FIELDNAME_PROP]避免函数调用
@@ -63,15 +66,14 @@ DataGrid.CHECKBOXCOL={
 	content:'<input type="checkbox" />'
 };
 DataGrid.TEMPLATE='<div class="view">\
-	<div class="veiwHeader">\
+	<div class="viewHeader">\
 		<div class="header">\
 			<div class="header1"><table border="1"><thead></thead></table></div>\
 			<div class="header2"><table border="1"><thead></thead></table></div>\
 		</div>\
 	</div>\
 	<div class="viewBody nowrap">\
-		<div class="content1"><table border="1"><thead></thead><tbody></tbody></table></div>\
-		<div class="content2"><table border="1"><thead></thead><tbody></tbody></table></div>\
+		<table><thead></thead><tbody></tbody></table>\
 		<div class="refLine"></div>\
 	</div>\
 </div>'
@@ -98,6 +100,7 @@ DataGrid.prototype={
 	frozenIndex:-1,//不考虑行号列和checkbox列
 	showCheckBox:false,
 	showRowNo:true,
+	multiSort:true,//是否支持多列排序
 	//用于列集变动后同步field和Column映射关系（建立索引是为了方便查询）
 	_rebuildColMap:function(){
 		this._nameColMap={};
@@ -145,8 +148,8 @@ DataGrid.prototype={
 		
 		var diff=index-original;
 		if(diff){
-			this._moveColumn(diff);
-			this._fixMarginLeft();
+			//this._moveColumn(diff);
+			//this._fixMarginLeft();
 		}
 	},
 	frozeColumn:function(field){
@@ -154,56 +157,30 @@ DataGrid.prototype={
 		this._setFrozenCol(field);
 		var diff=this.frozenIndex-original;
 		if(diff){
-			this._moveColumn(diff);
-			this._fixMarginLeft();
+			//this._moveColumn(diff);
+			//this._fixMarginLeft();
 		}
 	},
-	//左右两个视图中列之间的移动操作（把左边的最后面的指定列数移动到右边，把右边的前面的列移动到左边的最后），用于实现固定列操作辅组方法
-	_moveColumn:function(count){
-		if(!count)return;
-		var ltr=!!(count<0);
-		count=Math.abs(count);
-		
-		var $el=this.$el;
-		//默认从右移到左
-		var from='.header2 tr,.content2 tr',to='.header1 tr,.content1 tr';
-		
-		var index=count;
-		var select='td:lt('+index+')';
-		var insertTo='appendTo';
-		var $to=$(to,$el);
-		var $from=$(from,$el);
-		if(ltr){
-			var temp=from;
-			from=to;
-			to=temp;
-			temp=$from;
-			$from=$to;
-			$to=temp;
-			index=$from.first().find('>td').length-count-1;
-			select='td:gt('+index+')';
-			if(index==-1){select='td';}//jQuery 使用:gt(-1)会出问题
-			insertTo='prependTo';
-		}
-		
-		$from.each(function(i,tr){
-			$(select,tr)[insertTo]($to[i]);
-		});
-	},
+
 	/*渲染整个表格控件，包括表头和表数据,表尾（注：分页以插件的形势存在，Grid可添加分页插件，为分页插件提供和model交互的接口，通过接口转发分页插件的命令）*/
 	render:function(data){
 		var $el=this.$el;
 		$el.addClass('grid');
 		var view=$(DataGrid.TEMPLATE),
-			frozenCols=this._getTheaderHtml(true),
-			otherCols=this._getTheaderHtml(false);
-		$('.header1 thead,.content1 thead',view).each(function(i,ele){
-			ele.innerHTML=frozenCols;
+			frozenCols=this._getTheaderHtml(true,true),
+			otherCols=this._getTheaderHtml(false,true);
+			
+		$('.header1 thead',view).each(function(i,ele){
+			ele.innerHTML='<tr>'+frozenCols+'</tr>';
 		});
-		$('.header2 thead,.content2 thead',view).each(function(i,ele){
-			ele.innerHTML=otherCols;
+		$('.header2 thead',view).each(function(i,ele){
+			ele.innerHTML='<tr>'+otherCols+'</tr>';
 		});
-		$('.content2',view).css('margin-left',this._getFrozenWidth()+'px');
+		
+		$('.viewBody thead',view).each(function(i,ele){
+			ele.innerHTML='<tr>'+frozenCols+otherCols+'</tr>';
+		});
+		
 		$el.append(view);
 		
 		this._initEvents();
@@ -216,11 +193,7 @@ DataGrid.prototype={
 		var view=this.$el.find('.view');
 		var dg=this;
 		view.scroll(function(){
-			//console.log(this.scrollLeft);
-			$('.content1',this).get(0).style.left=this.scrollLeft+'px';
-			$('.header2>table')[0].style.marginLeft=0-this.scrollLeft+'px';
-			$('.veiwHeader',this)[0].style.marginLeft=this.scrollLeft+'px';
-			$('.veiwHeader',this)[0].style.top=this.scrollTop+'px';
+			dg._fixScroll();
 		});
 		
 		//拖动调整列宽
@@ -250,6 +223,28 @@ DataGrid.prototype={
 			$(this).removeClass('active');
 			$('.view .refLine',dg.$el).hide();
 		});
+	},
+	_fixScroll:function(){
+		var tbs=$('.header>table,.viewBody>table',this.$el);
+		var slice=[].slice;
+		var rows1=slice.call(tbs[0].rows,0),
+			rows2=slice.call(tbs[1].rows,0);
+		rows2.shift();
+		var rows=rows1.concat(rows2);
+		var end=this.frozenIndex+1;
+		var view=this.$el.find('.view');
+		var left=view[0].scrollLeft+'px';
+		
+		$('.viewHeader',view)[0].style.top=view[0].scrollTop+'px';
+		$('.header2>table',view)[0].style.marginLeft=0-view[0].scrollLeft+'px';
+		
+		for(var i=0,len=rows.length;i<len;i++){
+			tds=slice.call(rows[i].cells,0,end);
+			for(var j=0,q=tds.length;j<q;j++){
+				tds[j].firstChild.style.left=left;
+				tds[j].lastChild.style.left=left;	
+			}
+		}
 	},
 	//显示数据行
 	loadData:function(data){
@@ -334,7 +329,7 @@ DataGrid.prototype={
 	_fixMarginLeft:function(){
 		this.$el.find('.content2').css('margin-left',this._getFrozenWidth()+'px');
 	},
-	_getTheaderHtml:function(frozen){//frozen标识是否获取固定列对应的表头
+	_getTheaderHtml:function(frozen,noTr){//frozen标识是否获取固定列对应的表头
 		var colCount=this.cols.length,
 			arr=new Array(30),
 			frozenColIndex=this.frozenIndex,	
@@ -343,11 +338,11 @@ DataGrid.prototype={
 			j=0,
 			i=start;
 			
-		arr[j++]='<tr>';
+		if(!noTr){arr[j++]='<tr>';}
 		for(;i<end;i++){
 			arr[j++]=this._getThCellOuterHtml(this.cols[i])
 		}
-		arr[j++]='</tr>';
+		if(!noTr){arr[j++]='</tr>';}
 		return arr.join('');
 	},
 	_getThCellOuterHtml:function(field){	
@@ -364,15 +359,15 @@ DataGrid.prototype={
 		};
 		
 		if(col[FIELDNAME_PROP]===DataGrid.ROWNOCOL[FIELDNAME_PROP]){
-			return '<td class="rowNoCol" style="width:'+col.width+'px;" data-field="'+field+'"></td>';
+			return '<td class="cell rowNoCol" style="width:'+col.width+'px;" data-field="'+field+'"></td>';
 		}
 		if(col[FIELDNAME_PROP]===DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
-			return '<td class="chkCol chkAll" style="width:'+col.width+'px;" data-field="'+field+'"><input type="checkbox" /></td>';
+			return '<td class="cell chkCol chkAll" style="width:'+col.width+'px;" data-field="'+field+'"><input type="checkbox" /></td>';
 		}
 		
 		var arr=new Array(10);
 		var j=0;
-		arr[j++]='<td style="width:';
+		arr[j++]='<td class="cell" style="width:';
 		arr[j++]=col.width;
 		arr[j++]='px;" data-field="';
 		arr[j++]=col[FIELDNAME_PROP];
@@ -384,20 +379,19 @@ DataGrid.prototype={
 		arr[j++]='</td>';
 		return arr.join('');
 	},
-	_getTbodyHtml:function(data,frozen){
+	_getTbodyHtml:function(data){
 		var cols=this.cols,
 			colCount=cols.length,
 			arr=new Array(100),
-			frozenColIndex=this.frozenIndex,	
-			start=!frozen ? frozenColIndex+1:0,
-			end=!frozen ?colCount:frozenColIndex+1,
+			
 			j=0,
 			i,field,row,value;
-
+		var left=this.$el.find('.view')[0].scrollLeft;
+		var frozenIndex=this.frozenIndex;
 		for(var s=0,len=data.length;s<len;s++){
 			row=data[s];
 			arr[j++]='<tr>';	
-			for(i=start;i<end;i++){
+			for(i=0;i<colCount;i++){
 				field=cols[i][FIELDNAME_PROP];
 				if(field!=DataGrid.ROWNOCOL[FIELDNAME_PROP]&&field!=DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
 					value=row[field];
@@ -406,16 +400,16 @@ DataGrid.prototype={
 				}else{
 					value='<input type="checkbox" />'
 				}
-				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value);
+				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value,i<=frozenIndex?left:0);
 			}
 			arr[j++]='</tr>';
 		}
 		
 		return arr.join('');
 	},
-	_getTdCellOuterHtml:function(col,value){
+	_getTdCellOuterHtml:function(col,value,left){
 		//return '<td >'+value+'</td>';
-		return '<td style="background-color:'+COLORS[Math.floor(Math.random()*COLORS.length)]+'">'+value+'</td>';
+		return '<td style="'+(!left?'':('left:'+left+'px;'))+'background-color:'+COLORS[Math.floor(Math.random()*COLORS.length)]+'"><div class="cellContent">'+value+'</div><div class="cellBorder"></div></td>';
 	},
 	
 	
