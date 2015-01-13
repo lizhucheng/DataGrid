@@ -1,8 +1,6 @@
 .grid{
 	position:relative;
 	overflow:hidden;
-	
-	background-color:#fff;
 }
 .grid  .view{
 	width:100%;
@@ -23,72 +21,97 @@
 .grid  .header{
 	white-space:nowrap;
 	width:10000px;
-	float:left;
 }
 .grid  .header>div{
 	float:left;
+	overflow:hidden;
 	
 }
-.grid thead td{height:20px;}
+.grid thead td{height:30px;}
 .grid .header1{
 	position:relative;
 	z-index:2;
 }
-.grid .header1{
+.grid .header2{
 	position:relative;
 	z-index:1;
 }
 .grid  .viewBody{
 	position:relative;
 }
-.grid  .header table {
+
+.grid  .header table,.grid  .viewBody >table{
 	table-layout:fixed;
 	width:10px;
-	border-collapse:collapse;
-}
-.grid  .viewBody >table{
-	table-layout:fixed;
-	width:10px;
-	border-collapse:separate;
-	
-	border-spacing:0;
-	border-width:1px 0 0 0;
+	border-collapse:collapse;	
+	border-spacing:0;	
 	border-style:solid;
 }
-.grid  .viewBody  td.cell{
+.grid  .header table{
+	border-width:1px 0 0 0;
+}
+.grid  .viewBody > table{
+	border-width:1px 0 0 0;
+}
+.grid  .cell{
 	position:relative;
-	z-index:1;
-}
-.grid  .viewBody  thead  td.cell{
 	white-space:nowrap;
-}
-.grid   td.frozen{
-	z-index:2;
+	padding:0;
 }
 
-.grid   td>.cellBorder{
+.grid   .cell>.cellBorder{
 	position:absolute;
 	width:100%;
 	height:100%;
 	top:0;
-	z-index:3;
 	border-width:1px;
-	border-style:hidden solid solid hidden;
+	border-style:hidden solid solid solid;
 	box-sizing:border-box;
 }
-
-.grid   td.first .cellBorder{
-	border-style:hidden solid solid solid;
+/*第一个td特别处理*/
+.grid   .header2 .cellBorder{
+	border-style:hidden solid solid hidden;
 }
-.grid   td  .cellContent{
+.grid .cell~.cell>.cellBorder{
+	border-style:hidden solid solid hidden;
+}
+
+.grid   .cell  .cellContent{
 	position:relative;
 	top:0;
 	left:0;
+	padding:2px;
+}
+
+/*处理层级关系*/
+.grid .viewBody  .cell{
+	z-index:5;
+}
+.grid .viewBody   .cellBorder{
+	background-color:#ff0;
+	z-index:6;
+}
+.grid .viewBody   .cellContent{
+	z-index:7;
+}
+/*活动列中单元格*/
+.grid  .viewBody  .frozen~.cell {
+	z-index:1;
+}
+.grid  .viewBody  .frozen~.cell  .cellBorder{
+	z-index:3;
+	background-color:transparent;
+}
+.grid  .viewBody  .frozen~.cell  .cellContent{
 	z-index:4;
 }
 
+.grid   .first .cellBorder{
+	border-style:hidden solid solid solid;
+}
 
-.grid td.rowNoCol{
+
+.grid  td.rowNoCol{
 	width:30px;
 }
 .grid td.chkCol{
@@ -96,13 +119,9 @@
 }
 
 
-
 .grid  .viewBody thead{
 	visibility:hidden;
 }
-
-
-
 .grid  .nowrap>table>tbody>tr>td{
 	white-space:nowrap;
 	overflow:hidden;

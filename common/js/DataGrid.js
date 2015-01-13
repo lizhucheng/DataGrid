@@ -68,8 +68,8 @@ DataGrid.CHECKBOXCOL={
 DataGrid.TEMPLATE='<div class="view">\
 	<div class="viewHeader">\
 		<div class="header">\
-			<div class="header1"><table border="1"><thead></thead></table></div>\
-			<div class="header2"><table border="1"><thead></thead></table></div>\
+			<div class="header1"><table border="0"><thead></thead></table></div>\
+			<div class="header2"><table border="0"><thead></thead></table></div>\
 		</div>\
 	</div>\
 	<div class="viewBody nowrap">\
@@ -128,14 +128,14 @@ DataGrid.prototype={
 		}
 		
 		this._rebuildColMap();
-		this._setFrozenCol(this.frozenCol||'');
+		this._setFrozenField(this.frozenField||'');
 	},
 	//只设置状态，不改变视图
-	_setFrozenCol:function(field){
+	_setFrozenField:function(field){
 		var col=this.getColumn(field);
 		if(field==DataGrid.ROWNOCOL[FIELDNAME_PROP] || field==DataGrid.ROWNOCOL[FIELDNAME_PROP])return;
 		if(col){
-			this.frozenCol=field;
+			this.frozenField=field;
 			this.frozenIndex=this.cols.indexOf(col);
 		}	
 	},
@@ -143,7 +143,7 @@ DataGrid.prototype={
 	_frozeColByIndex:function(index){
 		index=Math.min(Math.max(-1,index),this.cols.length-1);
 		var original=this.frozenIndex;
-		this.frozenCol=index>0 && index<this.cols.length?this.cols[index][FIELDNAME_PROP]:'';
+		this.frozenField=index>0 && index<this.cols.length?this.cols[index][FIELDNAME_PROP]:'';
 		this.frozenIndex=index;
 		
 		var diff=index-original;
@@ -154,7 +154,7 @@ DataGrid.prototype={
 	},
 	frozeColumn:function(field){
 		var original=this.frozenIndex;
-		this._setFrozenCol(field);
+		this._setFrozenField(field);
 		var diff=this.frozenIndex-original;
 		if(diff){
 			//this._moveColumn(diff);
@@ -225,18 +225,19 @@ DataGrid.prototype={
 		});
 	},
 	_fixScroll:function(){
-		var tbs=$('.header>table,.viewBody>table',this.$el);
+		var tb=$('.viewBody>table',this.$el);
 		var slice=[].slice;
-		var rows1=slice.call(tbs[0].rows,0),
-			rows2=slice.call(tbs[1].rows,0);
-		rows2.shift();
-		var rows=rows1.concat(rows2);
+		var rows=slice.call($('.viewBody>table',this.$el)[0].rows,0);			
+		rows.shift();
+
 		var end=this.frozenIndex+1;
 		var view=this.$el.find('.view');
 		var left=view[0].scrollLeft+'px';
 		
-		$('.viewHeader',view)[0].style.top=view[0].scrollTop+'px';
+		$('.viewHeader',view)[0].style.left=left;
+		$('.viewHeader',view)[0].style.top=view.scrollTop+'px';
 		$('.header2>table',view)[0].style.marginLeft=0-view[0].scrollLeft+'px';
+		
 		
 		for(var i=0,len=rows.length;i<len;i++){
 			tds=slice.call(rows[i].cells,0,end);
@@ -248,13 +249,11 @@ DataGrid.prototype={
 	},
 	//显示数据行
 	loadData:function(data){
-		var frozenCols=this._getTbodyHtml(data,true),
-			otherCols=this._getTbodyHtml(data)
+		var html=this._getTbodyHtml(data),
 			$el=this.$el;
 		
 		$('.viewBody',$el).hide();
-		$('.viewBody .content1 tbody',$el).html(frozenCols);
-		$('.viewBody .content2 tbody',$el).html(otherCols);
+		$('.viewBody tbody',$el).html(html);
 		$('.viewBody').show();
 	},
 	setColWidth:function(field,width){
@@ -357,12 +356,12 @@ DataGrid.prototype={
 		if(!col){
 			throw('expection message:列'+field+'不存在!');
 		};
-		
+
 		if(col[FIELDNAME_PROP]===DataGrid.ROWNOCOL[FIELDNAME_PROP]){
-			return '<td class="cell rowNoCol" style="width:'+col.width+'px;" data-field="'+field+'"></td>';
+			return '<td class="cell rowNoCol" style="width:'+col.width+'px;" data-field="'+field+'"><div class="cellBorder"></div></td>';
 		}
 		if(col[FIELDNAME_PROP]===DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
-			return '<td class="cell chkCol chkAll" style="width:'+col.width+'px;" data-field="'+field+'"><input type="checkbox" /></td>';
+			return '<td class="cell chkCol chkAll" style="width:'+col.width+'px;" data-field="'+field+'"><div class="cellContent"><input type="checkbox" /></div><div class="cellBorder"></div></td>';
 		}
 		
 		var arr=new Array(10);
@@ -372,11 +371,12 @@ DataGrid.prototype={
 		arr[j++]='px;" data-field="';
 		arr[j++]=col[FIELDNAME_PROP];
 		arr[j++]='">';
+		arr[j++]='<div class="cellContent">';
 		arr[j++]=col.title;
 		if(col.resizable){
 			arr[j++]='<span class="col-resizer"></span>';
 		}
-		arr[j++]='</td>';
+		arr[j++]='</div><div class="cellBorder"></div></td>';
 		return arr.join('');
 	},
 	_getTbodyHtml:function(data){
@@ -400,23 +400,44 @@ DataGrid.prototype={
 				}else{
 					value='<input type="checkbox" />'
 				}
-				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value,i<=frozenIndex?left:0);
+				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value,i<=frozenIndex?left:0,!i);
 			}
 			arr[j++]='</tr>';
 		}
 		
 		return arr.join('');
 	},
-	_getTdCellOuterHtml:function(col,value,left){
+	_getTdCellOuterHtml:function(col,value,left,first){
 		//return '<td >'+value+'</td>';
-		return '<td style="'+(!left?'':('left:'+left+'px;'))+'background-color:'+COLORS[Math.floor(Math.random()*COLORS.length)]+'"><div class="cellContent">'+value+'</div><div class="cellBorder"></div></td>';
+		var arr=new Array(30),j=0;
+		arr[j++]='<td class="cell';
+		arr[j++]=first?' first':'';
+		arr[j++]=col[FIELDNAME_PROP]!==this.frozenField?'':' frozen';
+		arr[j++]='">';
+		if(!left){
+			arr[j++]='<div class="cellContent">';
+			arr[j++]=value;	
+			arr[j++]='</div><div class="cellBorder" style="background-color:';
+			arr[j++]="";//COLORS[Math.floor(Math.random()*COLORS.length)];
+			arr[j++]=';"></div></td>';
+		}else{
+			arr[j++]='<div class="cellContent" style="left:';
+			arr[j++]=left;
+			arr[j++]='px;">';
+			arr[j++]=value;	
+			arr[j++]='</div><div class="cellBorder" style="background-color:';
+			arr[j++]="";//COLORS[Math.floor(Math.random()*COLORS.length)];
+			arr[j++]=';left:';
+			arr[j++]=left;
+			arr[j++]='px;"></div></td>';
+		}
+		return arr.join('');
 	},
 	
 	
 	
 	___end:''
 }
-
 
 
 }(jQuery)
