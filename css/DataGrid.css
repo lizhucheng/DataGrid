@@ -1,13 +1,18 @@
 .grid{
 	position:relative;
 	overflow:hidden;
+	
+}
+/*必须给表头和固定区设置背景，否则其下面的内容会透明出来*/
+.grid  .viewHeader,
+.grid  .cellBorder{
+	background-color:#fff;
 }
 .grid  .view{
 	width:100%;
 	height:100%;
 	overflow:auto;
 	position:relative;
-	background-color:#ddd;
 }
 .grid  .viewHeader{	
 	position:absolute;
@@ -30,14 +35,15 @@
 .grid thead td{height:30px;}
 .grid .header1{
 	position:relative;
-	z-index:2;
+	z-index:12;
 }
 .grid .header2{
 	position:relative;
-	z-index:1;
+	z-index:11;
 }
 .grid  .viewBody{
 	position:relative;
+	z-index:1;
 }
 
 .grid  .header table,.grid  .viewBody >table{
@@ -55,8 +61,8 @@
 }
 .grid  .cell{
 	position:relative;
-	white-space:nowrap;
 	padding:0;
+	width:120px;
 }
 
 .grid   .cell>.cellBorder{
@@ -84,25 +90,24 @@
 }
 
 /*处理层级关系*/
-.grid .viewBody  .cell{
+.grid   .cell{
 	z-index:5;
 }
-.grid .viewBody   .cellBorder{
-	background-color:#ff0;
+.grid    .cellBorder{
 	z-index:6;
 }
-.grid .viewBody   .cellContent{
+.grid    .cellContent{
 	z-index:7;
 }
 /*活动列中单元格*/
-.grid  .viewBody  .frozen~.cell {
+.grid    .frozen~.cell {
 	z-index:1;
 }
-.grid  .viewBody  .frozen~.cell  .cellBorder{
+.grid    .frozen~.cell  .cellBorder{
 	z-index:3;
 	background-color:transparent;
 }
-.grid  .viewBody  .frozen~.cell  .cellContent{
+.grid    .frozen~.cell  .cellContent{
 	z-index:4;
 }
 
@@ -122,10 +127,16 @@
 .grid  .viewBody thead{
 	visibility:hidden;
 }
-.grid  .nowrap>table>tbody>tr>td{
+/*内容默认不换行*/
+.grid   .viewBody   tbody  .cellContent{
 	white-space:nowrap;
 	overflow:hidden;
 	text-overflow:ellipsis;
+}
+.grid.autoWrap   .viewBody  tbody  .cellContent{
+	overflow:visible;
+	white-space:normal;
+	word-wrap:break-word;
 }
 /*col-resizer*/
 .grid  .col-resizer{

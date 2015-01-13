@@ -10,10 +10,11 @@
 <script src="../common/js/DataGrid.js"></script>
 <script src="options.js"></script>
 <script>
+cb.console.log_debug=true;
 var dg
 $(function(){
 	dg=cb.controls.DataGrid('grid1',options);
-	dg.render(getTestData(3));
+	dg.render(getTestData(100));
 })
 
 </script>

@@ -72,7 +72,7 @@ DataGrid.TEMPLATE='<div class="view">\
 			<div class="header2"><table border="0"><thead></thead></table></div>\
 		</div>\
 	</div>\
-	<div class="viewBody nowrap">\
+	<div class="viewBody">\
 		<table><thead></thead><tbody></tbody></table>\
 		<div class="refLine"></div>\
 	</div>\
@@ -182,6 +182,9 @@ DataGrid.prototype={
 		});
 		
 		$el.append(view);
+		//记录初始滚动值
+		this._lastScrollTop=view[0].scrollTop;
+		this._lastScrollLeft=view[0].scrollLeft;
 		
 		this._initEvents();
 		
@@ -192,8 +195,8 @@ DataGrid.prototype={
 		//固定列实现
 		var view=this.$el.find('.view');
 		var dg=this;
-		view.scroll(function(){
-			dg._fixScroll();
+		view.scroll(function(evt){
+			dg._fixScroll(evt);
 		});
 		
 		//拖动调整列宽
@@ -215,7 +218,7 @@ DataGrid.prototype={
 			$(this).addClass('active');
 			var $col=$(this).closest('[data-field]');
 			var field=$col.data('field');
-			var colWidth=Number.parseInt($col[0].style.width);//此处不能用col.width();chrome中获取通过这种方式获取宽度时有问题。
+			var colWidth=parseInt($col[0].style.width);//此处不能用col.width();chrome中获取通过这种方式获取宽度时有问题。
 			var width=dd.deltaX+colWidth;//避免宽度设置为负数
 			console.log('field,width:',field,',',width);
 			dg.setColWidth(field,width);
@@ -224,18 +227,30 @@ DataGrid.prototype={
 			$('.view .refLine',dg.$el).hide();
 		});
 	},
-	_fixScroll:function(){
+	_fixScroll:function(evt){
+		var view=this.$el.find('.view');
+		//console.log(evt);
+		//处理垂直滚动
+		if(view[0].scrollTop!=this._lastScrollTop){
+			$('.viewHeader',view)[0].style.top=view[0].scrollTop+'px';
+			this._lastScrollTop=view[0].scrollTop;
+		}
+		
+		if(view[0].scrollLeft==this._lastScrollLeft){
+			console.log('垂直滚动，不处理水平定位');
+			return;
+		}
+		this._lastScrollLeft=view[0].scrollLeft;
+		
 		var tb=$('.viewBody>table',this.$el);
 		var slice=[].slice;
 		var rows=slice.call($('.viewBody>table',this.$el)[0].rows,0);			
 		rows.shift();
 
-		var end=this.frozenIndex+1;
-		var view=this.$el.find('.view');
+		var end=this.frozenIndex+1;		
 		var left=view[0].scrollLeft+'px';
 		
 		$('.viewHeader',view)[0].style.left=left;
-		$('.viewHeader',view)[0].style.top=view.scrollTop+'px';
 		$('.header2>table',view)[0].style.marginLeft=0-view[0].scrollLeft+'px';
 		
 		
@@ -246,6 +261,7 @@ DataGrid.prototype={
 				tds[j].lastChild.style.left=left;	
 			}
 		}
+		
 	},
 	//显示数据行
 	loadData:function(data){
@@ -263,16 +279,13 @@ DataGrid.prototype={
 		//改变表头宽度
 		width=Math.max(50,width);//避免列太窄
 		//var delta=width-$('[data-field='+field+']').width();
-		var delta=width-Number.parseInt($('.header [data-field='+field+']:eq(0)',this.$el)[0].style.width);
+		var delta=width-parseInt($('.header [data-field='+field+']:eq(0)',this.$el)[0].style.width);
 		$('[data-field='+field+']:eq(0)',this.$el.find('.header,.viewBody')).width(width);
 		
 		var index=this.cols.indexOf(this._nameColMap[field]);
 		//更新列width属性
 		this.cols[index].width=width;
-		//如果列为固定列，这调整可滚动区的margin-left
-		if(index<=this.frozenIndex){
-			this._fixMarginLeft();
-		}
+		
 	},
 	_getColIndex:function(field){
 		var col=this._nameColMap[field];
@@ -310,23 +323,6 @@ DataGrid.prototype={
 	_toggleColumn:function(field){//方便测试时使用
 		var col=this._nameColMap[field];
 		this._setColVisible(field,col&&!col.visible);
-	},
-	_getFrozenWidth:function(){
-		var width=0,cols=this.cols,i=0,hasFrozenCol=false;
-			end=this.frozenIndex+1,
-			fix=2*DataGrid.CELLPADDING+DataGrid.BORDERWIDTH;
-	
-		for(;i<end;i++){
-			if(cols[i].visible){
-				width+=cols[i].width+fix;
-			}
-		}
-		width=width?width+1:width;//width!=0说明有固定列
-		console.log('margin-left:',width);
-		return width;
-	},
-	_fixMarginLeft:function(){
-		this.$el.find('.content2').css('margin-left',this._getFrozenWidth()+'px');
 	},
 	_getTheaderHtml:function(frozen,noTr){//frozen标识是否获取固定列对应的表头
 		var colCount=this.cols.length,
@@ -418,7 +414,7 @@ DataGrid.prototype={
 			arr[j++]='<div class="cellContent">';
 			arr[j++]=value;	
 			arr[j++]='</div><div class="cellBorder" style="background-color:';
-			arr[j++]="";//COLORS[Math.floor(Math.random()*COLORS.length)];
+			arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
 			arr[j++]=';"></div></td>';
 		}else{
 			arr[j++]='<div class="cellContent" style="left:';
@@ -426,7 +422,7 @@ DataGrid.prototype={
 			arr[j++]='px;">';
 			arr[j++]=value;	
 			arr[j++]='</div><div class="cellBorder" style="background-color:';
-			arr[j++]="";//COLORS[Math.floor(Math.random()*COLORS.length)];
+			arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
 			arr[j++]=';left:';
 			arr[j++]=left;
 			arr[j++]='px;"></div></td>';

@@ -46,7 +46,7 @@ var options={
 			}
 		],
 		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
-		
+		autoWrap:true,
 		//提供grid层次上对行样式控制机制（可根据行序和行数据特征进行样式控制），每次有行改变（grid视图上的改变，包括行移动和行内容改动）时都要重新渲染。
 		//约定通过rowStyler设置时只能通过设置class关联样式，且class名带前缀 "rowStyler-"；
 		//cellStyler类似 class名带前缀"cellStyler-"
