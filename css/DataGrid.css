@@ -78,9 +78,14 @@
 .grid   .header2 .cellBorder{
 	border-style:hidden solid solid hidden;
 }
+.grid.noFrozen   .header2 .cellBorder{
+	border-style:hidden solid solid solid;
+}
 .grid .cell~.cell>.cellBorder{
 	border-style:hidden solid solid hidden;
 }
+
+
 
 .grid   .cell  .cellContent{
 	position:relative;

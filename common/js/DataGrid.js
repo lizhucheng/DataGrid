@@ -36,6 +36,7 @@ Column.prototype={
 	headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 	width:120,	//宽度
 	sortable:false,
+	autoWrap:false,//内容是否自动换行
 	//defaults~/
 	
 	//getName:function(){return this.[FIELDNAME_PROP];},//不提供这个方法了，直接使用this.[FIELDNAME_PROP]避免函数调用
@@ -152,6 +153,8 @@ DataGrid.prototype={
 		}
 	},
 	frozeColumn:function(field){
+		if(this.getColumn(field)){return;}
+		
 		var original=this.frozenIndex;
 		this._setFrozenField(field);
 		var diff=this.frozenIndex-original;
@@ -219,12 +222,15 @@ DataGrid.prototype={
 				td.lastChild.style.left=0;
 			}
 		}
-		
+		this.$el[this.frozenIndex==-1?'addClass':'removeClass']('noFrozen');
 	},
 	/*渲染整个表格控件，包括表头和表数据,表尾（注：分页以插件的形势存在，Grid可添加分页插件，为分页插件提供和model交互的接口，通过接口转发分页插件的命令）*/
 	render:function(data){
 		var $el=this.$el;
 		$el.addClass('grid');
+		if(this.autoWrap){
+			this.setAutoWrap(true);
+		}
 		var view=$(DataGrid.TEMPLATE),
 			frozenCols=this._getTheaderHtml(true,true),
 			otherCols=this._getTheaderHtml(false,true);
@@ -493,7 +499,9 @@ DataGrid.prototype={
 		}
 		return arr.join('');
 	},
-	
+	setAutoWrap:function(wrap){
+		this.$el.toggleClass('autoWrap',this.autoWrap=!!wrap);
+	},
 	
 	
 	___end:''
