@@ -36,6 +36,7 @@ Column.prototype={
 	headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 	width:120,	//宽度
 	sortable:false,
+	//sortStatus:0,//字段当前排序状态；值0、1、2分别表示未排序，递增排序，递减排序；这个信息在模型内部管理
 	autoWrap:false,//内容是否自动换行
 	//defaults~/
 	
@@ -294,6 +295,25 @@ DataGrid.prototype={
 			$(this).removeClass('active');
 			$('.view .refLine',dg.$el).hide();
 		});
+		
+		//点击表头排序
+		var sortStatus=['sortDesc','sortAsc','none'];
+		$('.viewHeader .cell',this.$el).on('click',function(evt){
+			var $td=$(this);
+			var field=$td.data(field);
+			var col=dg.getColumn(field);
+			var sortIcon=$('.cellContent .sortIcon',$td);
+			var currentStatus=sortIcon.hasClass('sortIcon).
+			if(!evt.ctrlKey){
+				var tds=this.parentNode.childNodes;
+				$('.cellContent .sortIcon',tds).each(function(i,el){
+					el.className='sortIcon';
+				});
+				sortIcon.addClass()
+			}else{
+			
+			}
+		})
 	},
 	_fixScroll:function(evt){
 		var view=this.$el.children('.view');
@@ -437,8 +457,12 @@ DataGrid.prototype={
 		arr[j++]='px;" data-field="';
 		arr[j++]=col[FIELDNAME_PROP];
 		arr[j++]='">';
-		arr[j++]='<div class="cellContent">';
+		arr[j++]='<div class="cellContent"><span class="title">';
 		arr[j++]=col.title;
+		arr[j++]='</span>';
+		if(col.sortable){
+			arr[j++]='<span class="sortIcon"></span>';
+		}
 		if(col.resizable){
 			arr[j++]='<span class="col-resizer"></span>';
 		}
