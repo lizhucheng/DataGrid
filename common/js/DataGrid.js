@@ -148,8 +148,7 @@ DataGrid.prototype={
 		
 		var diff=index-original;
 		if(diff){
-			//this._moveColumn(diff);
-			//this._fixMarginLeft();
+			this._fixFrozenColumn(original);
 		}
 	},
 	frozeColumn:function(field){
@@ -157,11 +156,71 @@ DataGrid.prototype={
 		this._setFrozenField(field);
 		var diff=this.frozenIndex-original;
 		if(diff){
-			//this._moveColumn(diff);
-			//this._fixMarginLeft();
+			this._fixFrozenColumn(original);
 		}
 	},
-
+	//左右两个视图中列之间的移动操作（把左边的最后面的指定列数移动到右边，把右边的前面的列移动到左边的最后），用于实现固定列操作辅组方法
+	_moveColumn:function(count){
+		if(!count)return;
+		var ltr=!!(count<0);
+		count=Math.abs(count);
+		
+		var $el=this.$el;
+		//默认从右移到左
+		var from='.header2 tr',to='.header1 tr';
+		
+		var index=count;
+		var select='td:lt('+index+')';
+		var insertTo='appendTo';
+		var $to=$(to,$el);
+		var $from=$(from,$el);
+		if(ltr){
+			var temp=from;
+			from=to;
+			to=temp;
+			temp=$from;
+			$from=$to;
+			$to=temp;
+			index=$from.first().find('>td').length-count-1;
+			select='td:gt('+index+')';
+			if(index==-1){select='td';}//jQuery 使用:gt(-1)会出问题
+			insertTo='prependTo';
+		}
+		
+		$from.each(function(i,tr){
+			$(select,tr)[insertTo]($to[i]);
+		});
+	},
+	_fixFrozenColumn:function(original){
+		var index=this.frozenIndex;
+		//调整表头
+		this._moveColumn(index-original);
+		//调整表体
+		var tb=$('.viewBody>table',this.$el);
+		var slice=[].slice;
+		var rows=slice.call($('.viewBody>table',this.$el)[0].rows,0);			
+		rows.shift();
+		
+		var td,
+			left=this.$el.children('.view')[0].scrollLeft+'px';
+		console.log('left:',left);
+		for(var i=0,len=rows.length;i<len;i++){
+			$(rows[i].cells[original]).toggleClass('frozen');
+			$(rows[i].cells[index]).toggleClass('frozen');
+			//调整td内容位置
+			for(var j=0;j<=index;j++){
+				td=rows[i].cells[j];
+				td.firstChild.style.left=left;
+				td.lastChild.style.left=left;
+			}
+			for(var j=index+1;j<=original;j++){
+				td=rows[i].cells[j];
+				td.firstChild.style.left=0;
+				td.lastChild.style.left=0;
+			}
+		}
+		
+	},
 	/*渲染整个表格控件，包括表头和表数据,表尾（注：分页以插件的形势存在，Grid可添加分页插件，为分页插件提供和model交互的接口，通过接口转发分页插件的命令）*/
 	render:function(data){
 		var $el=this.$el;
@@ -171,21 +230,24 @@ DataGrid.prototype={
 			otherCols=this._getTheaderHtml(false,true);
 			
 		$('.header1 thead',view).each(function(i,ele){
-			ele.innerHTML='<tr>'+frozenCols+'</tr>';
+			//ele.innerHTML='<tr>'+frozenCols+'</tr>';
+			$(ele).html('<tr>'+frozenCols+'</tr>');
 		});
 		$('.header2 thead',view).each(function(i,ele){
-			ele.innerHTML='<tr>'+otherCols+'</tr>';
+			//ele.innerHTML='<tr>'+otherCols+'</tr>';
+			$(ele).html('<tr>'+otherCols+'</tr>');
 		});
 		
 		$('.viewBody thead',view).each(function(i,ele){
-			ele.innerHTML='<tr>'+frozenCols+otherCols+'</tr>';
+			//ele.innerHTML='<tr>'+frozenCols+otherCols+'</tr>';
+			$(ele).html('<tr>'+frozenCols+otherCols+'</tr>');
 		});
 		
 		$el.append(view);
 		//记录初始滚动值
-		this._lastScrollTop=view[0].scrollTop;
-		this._lastScrollLeft=view[0].scrollLeft;
-		
+		this._lastScrollTop=0;
+		this._lastScrollLeft=0;
+	
 		this._initEvents();
 		
 		view=null;
@@ -193,7 +255,7 @@ DataGrid.prototype={
 	},
 	_initEvents:function(){
 		//固定列实现
-		var view=this.$el.find('.view');
+		var view=this.$el.children('.view');
 		var dg=this;
 		view.scroll(function(evt){
 			dg._fixScroll(evt);
@@ -228,7 +290,7 @@ DataGrid.prototype={
 		});
 	},
 	_fixScroll:function(evt){
-		var view=this.$el.find('.view');
+		var view=this.$el.children('.view');
 		//console.log(evt);
 		//处理垂直滚动
 		if(view[0].scrollTop!=this._lastScrollTop){
@@ -300,18 +362,20 @@ DataGrid.prototype={
 		if(index>-1&&this.cols[index].visible!==visible){
 			this.cols[index].visible=visible;
 			
-			var tables='.header1>table,.content1>table';
+			var headerColIndex=index,//指定列在表头的索引
+				bodyColIndex=index;
+			var tables='.header1>table,.viewBody>table';
 			if(index>this.frozenIndex){
-				index=index-this.frozenIndex-1;
-				tables='.header2>table,.content2>table';
-			}		
+				headerColIndex=index-this.frozenIndex-1;
+				tables='.header2>table,.viewBody>table';
+			}	
 			this.$el.find(tables).each(function(i,el){
+				var index=i?bodyColIndex:headerColIndex;
 				//table.rows并不是数组，而是一个HTMLCollection对象，所以不能直接用数组的迭代方法
 				Array.prototype.slice.call(el.rows,0).forEach(function(tr,i){
 					tr.cells[index].style.display=display;
 				});
 			});
-			this._fixMarginLeft();
 		}
 	},
 	showColumn:function(field){
