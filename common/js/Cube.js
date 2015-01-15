@@ -143,16 +143,19 @@ cb.convert = {}; //
 
 //#region 事件管理
 cb.events = {};
-cb.events.on = cb.events.bind = function (name, callback) {
+cb.events.on = cb.events.bind = function (name, callback,context) {
     if (!name || !callback)
         return;
     name = name.toLowerCase(); //一律使用小写
     this._events || (this._events = {});
     var events = this._events[name] || (this._events[name] = []);
-    events.push({ callback: callback });
+	if(context){
+		callback.context=context;
+	}
+    events.push(callback);
 }
 cb.events.un = function (name, callback) {
-    if (name || !this._events)
+    if (!name || !this._events)
         return;
     name = name.toLowerCase(); //一律使用小写
 
@@ -178,7 +181,10 @@ cb.events.excute = function (name, args) {
         return true;
     var result = true;
     for (var i = 0; i < events.length; i++) {
-        result = events[i].callback.call(this, args) === false ? false : result;
+		args=[].slice.call(arguments,0);
+		args.shift();
+		var callback=events[i];
+        result = callback.apply(callback._context||this, args) === false ? false : result;
     }
 
     return result;

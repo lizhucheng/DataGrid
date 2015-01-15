@@ -131,6 +131,8 @@ DataGrid.prototype={
 		
 		this._rebuildColMap();
 		this._setFrozenField(this.frozenField||'');
+		
+		this.orderBy=[];//元素为数组，数组第一个分量为字段名，第二个为'asc'或'desc';
 	},
 	//只设置状态，不改变视图
 	_setFrozenField:function(field){
@@ -299,11 +301,12 @@ DataGrid.prototype={
 		//点击表头排序
 		var sortStatus=['sortDesc','sortAsc','none'];
 		$('.viewHeader .cell',this.$el).on('click',function(evt){
+		/*
 			var $td=$(this);
 			var field=$td.data(field);
 			var col=dg.getColumn(field);
 			var sortIcon=$('.cellContent .sortIcon',$td);
-			var currentStatus=sortIcon.hasClass('sortIcon).
+			//var currentStatus=sortIcon.hasClass('sortIcon).
 			if(!evt.ctrlKey){
 				var tds=this.parentNode.childNodes;
 				$('.cellContent .sortIcon',tds).each(function(i,el){
@@ -313,6 +316,7 @@ DataGrid.prototype={
 			}else{
 			
 			}
+			*/
 		})
 	},
 	_fixScroll:function(evt){
@@ -526,10 +530,19 @@ DataGrid.prototype={
 	setAutoWrap:function(wrap){
 		this.$el.toggleClass('autoWrap',this.autoWrap=!!wrap);
 	},
-	
+	//按指定字段集的排序规则排序
+	sortBy:function(fields){
+		//改变视图
+		//抛出时间，更新数据
+		this.execute('sort',fields);
+	},
+	setData:function(data){
+		this.init(data);
+		this.render(data.Rows)
+	},
 	
 	___end:''
 }
-
-
+//自定义事件机制
+$.extend(DataGrid.prototype,cb.events);
 }(jQuery)

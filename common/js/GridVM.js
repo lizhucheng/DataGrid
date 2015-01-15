@@ -1026,36 +1026,4 @@ cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyDat
     }
 }
 
-//支持数据对象，考虑跟set合并成一个方法
-cb.model.Model2D.prototype.setData = function (data) {
-    cb.console.log("Model2D.setData", this);
-    if (arguments.length == 0)
-        return;
-    if (!arguments[0] || !data)
-        return;
-    if (arguments.length == 1 && !typeof data == "object") //if (data.constructor != Object || data.constructor != Array)
-        return;
-    if (data.constructor == Array)
-        data = { Rows: data };
-    if (arguments.length == 2) {
-        var tempData = {};
-        tempData[arguments[0]] = arguments[1];
-        data = tempData;
-    }
-    if (data.Rows) {
-        //this.add(data.Rows, true);
-        this.setRows(data.Rows);
-        delete data.Rows;
-    }
-    for (var attr in data) {
-        value = data[attr];
-        if (typeof value == "function") {
-            this.on(attr, value);
-        }
-        else if (this._data.hasOwnProperty(attr) || !cb.isEmpty(value)) {
-            this.set(attr, value); //需要考虑批量操作
-        }
-    }
-    cb.console.log("Model2D.setData", this);
-}
 cb.model.Model3D.prototype = new cb.model.BaseModel();

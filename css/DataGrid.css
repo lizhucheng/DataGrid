@@ -1,7 +1,6 @@
 .grid{
 	position:relative;
 	overflow:hidden;
-	
 }
 /*必须给表头和固定区设置背景，否则其下面的内容会透明出来*/
 .grid  .viewHeader,
