@@ -18,10 +18,11 @@ cb.model.Model3D = function (parent, name, data) {
     this._data.Mode = this._data.Mode || "Local";
     this._data.Rows = this._data.Rows || []; //this._data.Rows = [{ ID: { readOnly: true, Value: 111 }, Name: 22, readOnly: true}]
     this._data.Columns = this._data.Columns || {}; //this._data.Columns = { ID: { readOnly: true, disabled: true }, Name: {} };
+	
     //var 基本的值包涵 = { readOnly: true, disabled: true, Value: 2 }; //原子数据
     this._focusedRow = this._data.Rows[0] || null;
     this._focusedRowIndex = 0;
-
+	//this._sortFields=[];
     this._editRowModel = null;
 
     this._data.PageInfo = this._data.PageInfo || { pageSize: 0, pageIndex: 1, pageCount: 1, totalCount: 0 };
@@ -290,7 +291,7 @@ cb.model.Model3D = function (parent, name, data) {
     this.setCellValue = function (rowIndex, cellName, value) {
         this.set(rowIndex, cellName, null, value);
     };
-    //界面录入值变化出发
+    //界面录入值变化触发
     this.cellChange = function (rowIndex, cellName, value) {
         var oldValue = this.getCellValue(rowIndex, cellName);
         if (oldValue === value)
@@ -680,18 +681,8 @@ cb.model.Model3D = function (parent, name, data) {
 
         this._after("removeAll");
     };
-    /*this.sort = function (column, desc) {
-    if (!this._before("sort"))
-    return;
-    this._data.Rows.sort(function (itemA, itemB) {
-    return desc ? (itemA[column] >= itemB[column] ? 1 : -1) : (itemA[column] <= itemB[column] ? 1 : -1);
-    });
-    this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "sort", this));
 
-    this._after("sort");
-    };*/
-
-    this.sort = function (field, direction) {
+    this.sort = function (fields) {
         if (!this._before("sort")) {
             return;
         }
@@ -711,37 +702,45 @@ cb.model.Model3D = function (parent, name, data) {
         else {
             rows = this._data.Rows;
         }
-        if (direction == "down") {
-            rows.sort(function (itemA, itemB) {
-                return itemA[field] <= itemB[field] ? 1 : -1;
-            });
-        }
-        else if (direction == "up") {
-            rows.sort(function (itemA, itemB) {
-                return itemA[field] >= itemB[field] ? 1 : -1;
-            });
-        }
+		var model3d=this,
+			Model3D=cb.model.Model3D;
+			columns=this._data.Columns;
+		var fn=function(itemA, itemB){
+				var valA,valB;
+				for(var i=0,len=fields.length;i<len;i++){
+					var field=fields[i][0];//字段名
+					var col=columns[field];
+					if(!col)continue;
+					
+					//提取行数据中对应字段的值
+					valA=itemA[field]&&typeof itemA[field]=='object'?itemA[field].value:itemA[field];
+					valB=itemB[field]&&typeof itemB[field]=='object'?itemB[field].value:itemB[field];
+					
+					//可在列信息中指定排序规则，指定排序规则时可通过名称引用已有的排序方式，也可以通过比较器定义排序规则
+					var comparator=col.comparator;
+					//如果未指定comparator，或指定无效的类型数据（既不是字符串，也不是函数）
+					if(!comparator||(typeof comparator!=='string'&& Object.prototype.toString.call(comparator)=='[object Function]')){
+						comparator=null;
+					}
+					//如果指定了预定义的比较器名称，则使用名称对应的比较器
+					comparator=typeof comparator==='string'?Model3D.comparators[comparator]:comparator;
+					//如果还没有确定比较器，则使用类型默认的排序方式,如果类型没有默认的排序方式
+					comparator=comparator||Model3D.comparators[col.type||'String'];//未指定字段类型时，默认为字符串类型
+
+					var direction=fields[i][1];
+					//如果没有比较器，这保持原有顺序
+					var result=comparator?(direction===1?comparator(valA, valB):0-comparator(valA, valB)):0;//direction:1 asc,-1 des;					
+					
+					if(result)return result;
+				}
+				return 0;
+			};
+		
+		rows.sort(fn);
         this._data.Rows = rows;
-        /*var args = {
-        pageSize: pageSize,
-        pageIndex: pageIndex,
-        pageCount: this._data.PageInfo.pageCount,
-        totalCount: this._data.PageInfo.totalCount,
-        currentPageData: rows
-        };*/
         this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "sort", this._data.Rows));
-        var statusData = this.getStatusData();
-        if (direction === "") {
-            statusData["SortInfo"] = "";
-        }
-        else if (direction === "down") {
-            statusData["SortInfo"] = this._data.Columns[field].name + " 降序";
-        }
-        else if (direction === "up") {
-            statusData["SortInfo"] = this._data.Columns[field].name + " 升序";
-        }
-        this.setStatusData();
         this._after("sort");
+		
     };
 
     this.setDirty = function (rowIndex, value) {
@@ -891,6 +890,7 @@ cb.model.Model3D = function (parent, name, data) {
         return dataCopy;
     };
 };
+
 cb.model.Model3D.prototype.getPkName = function () {
 	 var columns = this._data.Columns||{};
 	 for (var col in columns) {
@@ -1027,3 +1027,15 @@ cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyDat
 }
 
 cb.model.Model3D.prototype = new cb.model.BaseModel();
+
+//内置的排序方式
+cb.model.Model3D.comparators={
+	'Number':function(num1,num2){return num1-num2;},
+	'String':function(strA,strB){return strA>strB?1:(strA<strB?-1:0);},
+	'String.IgnoreCase':function(a,b){
+		var strA=a.toLowerCase(),
+			strB=b.toLowerCase();
+		return strA>strB?1:(strA<strB?-1:0);
+	}
+};
+cb.model.Model3D.comparators['Boolean']=cb.model.Model3D.comparators['Number'];

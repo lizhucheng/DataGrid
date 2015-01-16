@@ -35,7 +35,8 @@ Column.prototype={
 	textAlign:'left',	//列文本水分方向对齐方式
 	headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 	width:120,	//宽度
-	sortable:false,
+	sortable:true,
+	order:'none',// 'asc','desc'
 	//sortStatus:0,//字段当前排序状态；值0、1、2分别表示未排序，递增排序，递减排序；这个信息在模型内部管理
 	autoWrap:false,//内容是否自动换行
 	//defaults~/
@@ -53,6 +54,28 @@ function createColumns(fields){
 	}
 	return cols;
 }
+//排序状态表
+var sortStatus={
+	'none':{
+		next:'asc',
+		//direction:0,
+		//cls:''
+	},
+	'asc':{
+		next:'desc',
+		direction:1,
+		cls:'sortAsc'
+	},
+	'desc':{
+		next:'none',
+		direction:-1,
+		cls:'sortDesc'
+	}
+};
+var valToStatus={
+	'1':'asc',
+	'-1':'desc'
+};
 //const/~
 DataGrid.CELLPADDING=1;
 DataGrid.BORDERWIDTH=1;
@@ -81,7 +104,6 @@ DataGrid.TEMPLATE='<div class="view">\
 </div>'
 //const~/
 //
-
 function DataGrid(el,options){
 	//调用兼容处理
 	if(!(this instanceof DataGrid))return new DataGrid(el,options);
@@ -132,7 +154,7 @@ DataGrid.prototype={
 		this._rebuildColMap();
 		this._setFrozenField(this.frozenField||'');
 		
-		this.orderBy=[];//元素为数组，数组第一个分量为字段名，第二个为'asc'或'desc';
+		this._sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
 	},
 	//只设置状态，不改变视图
 	_setFrozenField:function(field){
@@ -298,25 +320,55 @@ DataGrid.prototype={
 			$('.view .refLine',dg.$el).hide();
 		});
 		
-		//点击表头排序
-		var sortStatus=['sortDesc','sortAsc','none'];
+		
 		$('.viewHeader .cell',this.$el).on('click',function(evt){
-		/*
-			var $td=$(this);
-			var field=$td.data(field);
-			var col=dg.getColumn(field);
-			var sortIcon=$('.cellContent .sortIcon',$td);
-			//var currentStatus=sortIcon.hasClass('sortIcon).
-			if(!evt.ctrlKey){
-				var tds=this.parentNode.childNodes;
-				$('.cellContent .sortIcon',tds).each(function(i,el){
-					el.className='sortIcon';
-				});
-				sortIcon.addClass()
-			}else{
+			//拖动手柄上的点击不处理
+			if($(evt.target).is('.col-resizer'))return;
 			
+			var sortFields;
+			var cell=$(this);
+			var field=cell.data('field');
+
+			var col=dg.getColumn(field);
+			//忽略不可排序列上的排序动作
+			if(!col.sortable){return;}
+			
+			var nextStatus=sortStatus[col['order']||'none'].next;
+			
+			if(!evt.ctrlKey){
+				if(nextStatus!=='none'){
+					sortFields=[[field,sortStatus[nextStatus].direction]];
+				}else{
+					sortFields=[];
+				}
+				
+			}else{
+				//sortFields=$.extend([],this._sortFields);
+				//本来这个地方应该使用副本的，此处不处理状态，只收集参数数据；但考虑到，事件后肯定要更新状态，所以就容忍局部的状态不统一了
+				sortFields=dg._sortFields;
+				var existed=false;
+				$.each(sortFields,function(i,item){
+					if(item[0]===field){
+						existed=i;
+						return false;
+					}
+				});
+				
+				if(existed!==false){	
+					if(nextStatus==='none'){
+						sortFields.splice(existed,1);
+					}else{
+						sortFields[existed][1]=sortStatus[nextStatus].direction;
+					}
+					
+				}else{//如果之前没有参与排序，则点击后的排序状态肯定非none
+					sortFields.push([field,sortStatus[nextStatus].direction])
+				}	
+				
 			}
-			*/
+			
+			//如果点击后变为列排序状态变为不排序，则不从model刷新视图
+			dg._sortBy(sortFields,nextStatus==='none'?true:false);
 		})
 	},
 	_fixScroll:function(evt){
@@ -531,14 +583,58 @@ DataGrid.prototype={
 		this.$el.toggleClass('autoWrap',this.autoWrap=!!wrap);
 	},
 	//按指定字段集的排序规则排序
-	sortBy:function(fields){
+	_sortBy:function(fields,noReflesh){
 		//改变视图
-		//抛出时间，更新数据
-		this.execute('sort',fields);
+		var fieldName,direction;
+		
+		//更新表头样式、更新列order属性
+		$('.header .cell',this.$el).removeClass('sortDesc sortAsc');
+		$.each(this.cols,function(i,col){
+			col.order='none';
+		});
+		var dg=this;
+		for(var i=fields.length-1;i>=0;i--){
+			//过滤掉不可排序的列
+			var field=fields[i];
+			var col=dg.getColumn(field[0]);
+			if(!col.sortable){
+				fields.splice(i,1);
+			}else{
+				var cell=$('.header td[data-field='+field[0]+']:eq(0)',this.$el);
+				cell.addClass(sortStatus[valToStatus[field[1]]].cls);
+				col.order=valToStatus[field[1]];
+			}
+		}
+
+		this._sortFields=fields;
+		
+		//说明不刷新数据和没指定排序字段时不更新model
+		if(!noReflesh && fields.length){
+			this.excute('sort',fields);
+		}
+	},
+	sortBy:function(fields){
+		this._sortBy(fields);	
 	},
 	setData:function(data){
-		this.init(data);
-		this.render(data.Rows)
+		//数据适配
+		var options=$.extend({},data);		
+		delete options.Rows;
+		delete options.fieldNames;
+		delete options.Columns;
+		//options.rows=data.Rows;
+		var fields=[];
+		var fieldName,fieldInfo;
+		for(var i=0,len=data.fieldNames.length;i<len;i++){
+			fieldName=data.fieldNames[i];
+			fieldInfo={};
+			fieldInfo[FIELDNAME_PROP]=fieldName;
+			fields.push($.extend(fieldInfo,data.Columns[fieldName]));
+		}
+		options.fields=fields;
+		//console.log(JSON.stringify(options,null,4));
+		this.init(options);
+		this.render(data.Rows);
 	},
 	
 	___end:''

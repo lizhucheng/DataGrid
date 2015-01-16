@@ -150,7 +150,7 @@ cb.events.on = cb.events.bind = function (name, callback,context) {
     this._events || (this._events = {});
     var events = this._events[name] || (this._events[name] = []);
 	if(context){
-		callback.context=context;
+		callback._context=context;
 	}
     events.push(callback);
 }
@@ -4898,7 +4898,7 @@ Object.clone = function (obj) {
             /// <returns type="">void</returns>
             if (!this._debug)
                 return;
-            this._internalLog(message, optionalParams);
+            this._internalLog.apply(this,[].slice.call(arguments,0));
         };
     }
     else {

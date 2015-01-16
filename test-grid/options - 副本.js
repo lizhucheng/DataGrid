@@ -12,12 +12,11 @@ var options={
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		multiSort:true,		//是否支持多列排序，默认true
-		fieldNames:['title','duration','percentComplete','start','finish','effortDriven'],//说明字段排序
-		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
 		//所有列的定义(有序)
-		Columns:{
-			'title':{
-				type:'String',
+		fields:[
+			//列定义
+			{
+				$name:'title',
 				title:'title',	//表头显示的文本
 				visible:true,	//列是否可见
 				resizable:true,	//列是否可拖动改变列宽
@@ -29,29 +28,24 @@ var options={
 				colStyle:function(index){},
 				onclick:function(){}
 			},
-			'duration':{
-				type:'Number',
-				sortable:false,
+			{
+				$name:'duration',
 				title:'duration'
 			},
-			'percentComplete':{
-				type:'Number',
-				title:'percentComplete'
+			{
+				$name:'percentComplete'
 			},
-			'start':{
-				type:'Date',
-				title:'start'
+			{
+				$name:'start'
 			},
-			'finish':{
-				type:'Date',
-				title:'finish'
+			{
+				$name:'finish'
 			},
-			'effortDriven':{
-				type:'Boolean',
-				title:'effortDriven'
-			}	
-		},
-		
+			{
+				$name:'effortDriven'
+			}
+		],
+		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
 		autoWrap:true,
 		//提供grid层次上对行样式控制机制（可根据行序和行数据特征进行样式控制），每次有行改变（grid视图上的改变，包括行移动和行内容改动）时都要重新渲染。
 		//约定通过rowStyler设置时只能通过设置class关联样式，且class名带前缀 "rowStyler-"；

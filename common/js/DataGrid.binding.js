@@ -14,7 +14,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
             model.sort(args);
         }
     };
-
+	this._set_sort=function(control,rows){
+		control.loadData(rows);
+	};
+	
     this._onSelectedRowsChanged = function (selectedRows) {
         var model = this.getModel();
         if (!model) return;
@@ -89,8 +92,8 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay) {
             control.un("onCellChange", this._onCellChange);
             control.on("onCellChange", this._onCellChange, this);
-            control.un("onSort", this._onSort);
-            control.on("onSort", this._onSort, this);
+            control.un("sort", this._onSort);
+            control.on("sort", this._onSort, this);
             control.un("onSelectedRowsChanged", this._onSelectedRowsChanged);
             control.on("onSelectedRowsChanged", this._onSelectedRowsChanged, this);
             control.un("onAddNewRow", this._onAddNewRow);

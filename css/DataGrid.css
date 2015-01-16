@@ -31,6 +31,7 @@
 	overflow:hidden;
 	
 }
+.grid  .header .cellContent{white-space:nowrap;}
 .grid thead td{height:30px;}
 .grid .header1{
 	position:relative;
@@ -183,11 +184,11 @@
 	display:none;
 	vertical-align:middle;
 }
-.grid  .sortAsc{
+.grid  .sortAsc .sortIcon{
 	display:inline-block;
 	background:url(../images/sort_icons.png) no-repeat 0 0;
 }
-.grid  .sortDesc{
+.grid  .sortDesc  .sortIcon{
 	display:inline-block;
 	background:url(../images/sort_icons.png) no-repeat -16px 0;
 }

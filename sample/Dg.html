@@ -8,7 +8,7 @@
 </head>
 <body>
 	<div id="Dg1" data-viewmodel="DgViewModel">
-        <div data-propertyname="product" data-controltype="DataGrid" class="grid" style="width:700px;height:400px;"></div>
+        <div data-propertyname="product" data-controltype="DataGrid" class="grid" style="width:900px;height:400px;"></div>
 	</div>
     <script src="../jquery/jquery-1.11.1.js" type="text/javascript"></script>
 	<script src="../jquery/jquery.event.drag-2.2.js"></script>
@@ -21,7 +21,9 @@
 	<script src="Dg.js" type="text/javascript"></script>
 	<script src="Dg_Extend.js" type="text/javascript"></script>
 	<script type="text/javascript">
-		cb.viewbinding.create("Dg1");
+		var viewBinding=cb.viewbinding.create("Dg1");
+		var dg=cb.controls.findControlById('cb_control_product_1');
+		var model=viewBinding.getModel('product');
 	</script>
 </body>
 </html>
