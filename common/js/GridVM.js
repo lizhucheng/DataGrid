@@ -19,10 +19,13 @@ cb.model.Model3D = function (parent, name, data) {
     this._data.Rows = this._data.Rows || []; //this._data.Rows = [{ ID: { readOnly: true, Value: 111 }, Name: 22, readOnly: true}]
     this._data.Columns = this._data.Columns || {}; //this._data.Columns = { ID: { readOnly: true, disabled: true }, Name: {} };
 	
+	this._data.sortFields=this._data.sortFields||[];//排序信息
+	this._data.mergeState=this._data.mergeState||false;//仅浏览态可用
+	
     //var 基本的值包涵 = { readOnly: true, disabled: true, Value: 2 }; //原子数据
     this._focusedRow = this._data.Rows[0] || null;
     this._focusedRowIndex = 0;
-	//this._sortFields=[];
+
     this._editRowModel = null;
 
     this._data.PageInfo = this._data.PageInfo || { pageSize: 0, pageIndex: 1, pageCount: 1, totalCount: 0 };
@@ -106,8 +109,8 @@ cb.model.Model3D = function (parent, name, data) {
             //获取整个控件状态
             if (rowIndex < 0 && !cellName) {
                 var oldValue = this._data[propertyName];
-                if (oldValue === value)
-                    return;
+                if (cb.isEqual(oldValue,value))//有时候属性值为对象
+                    return false;
 
                 var context = { PropertyName: propertyName, Value: value, OldValue: oldValue };
                 if (!this._before("StateChange", context))
@@ -122,7 +125,7 @@ cb.model.Model3D = function (parent, name, data) {
                 }
                 */
 
-                var args = new cb.model.PropertyChangeArgs(this._name, "StateChange", context);
+                var args = new cb.model.PropertyChangeArgs(this._name, propertyName, value,oldValue);
                 this.PropertyChange(args);
 
                 this._after("StateChange", context);
@@ -132,7 +135,7 @@ cb.model.Model3D = function (parent, name, data) {
             else if (rowIndex < 0 && cellName) {
                 var oldValue = this._data.Columns[cellName][propertyName];
                 if (oldValue === value)
-                    return;
+                    return false;
 
                 var context = { Row: rowIndex, CellName: cellName, PropertyName: propertyName, Value: value, OldValue: oldValue, Columns: this._data.Columns };
                 if (!this._before("ColumnStateChange", context))
@@ -225,6 +228,92 @@ cb.model.Model3D = function (parent, name, data) {
         this.syncEditRowModel(rowIndex, cellName, propertyName, value); //需要优化一下，看放在哪里效率高
     };
 
+	this.setMergeState=function(merge){
+		if(this.set('mergeState',!!merge)!==false){//属性变化时才通知视图更新，把和并信息的计算放到绑定器中处理
+			var mergeCells=null;
+			if(merge){
+				mergeCells=this._getMergeCells();
+			}
+			var args = new cb.model.PropertyChangeArgs(this._name, "mergeInfo",{rows:this._data.Rows,mergeCells:mergeCells});
+			this.PropertyChange(args);	
+		}
+	};
+	this.getMergeState=function(){return this.get('mergeState');}
+
+	//返回当前显示行的可合并信息
+	/*只统计rowspan>=2的单元格
+	数据结构：{
+		field1:[{index:0,rowspan:2},{index:2,rowspan:3}],
+		field2:[{index:2,rowspan:2}]
+	}
+	*/
+	this._getMergeCells=function(){
+		var fields=this._data.fieldNames;
+		var count=0;//统计一共有多少可合并的单元格
+		var mergeCells={};
+		var rows=this._data.Rows;
+		var cellsInPreCol=[{index:0,rowspan:rows.length}];//前列中合并的单元格信息
+		var cellsInCurCol;//当前列的合并单元格信息，当前列中合并的单元格信息依赖与前列的合并单元格信息
+		var field,//当前字段名
+			preMergeCell,preVal,val;//当前处理的列参照的前一列中合并的单元格
+		for(var i=0,len=fields.length;i<len;i++){
+			field=fields[i];
+			cellsInCurCol=[];
+			for(var j=0;j<cellsInPreCol.length;j++){
+				preMergeCell=cellsInPreCol[j];
+				var k=preMergeCell['index'],end=k+preMergeCell.rowspan;
+				var rowspan=0;
+				do{
+					val=this.get(k,field);
+					if(!rowspan){
+						rowspan++;
+						preVal=val;	
+							
+					}else{
+						if(val!==preVal){//如果和前面的只不相等，则只合并前面扫描过的行单元格
+							if(rowspan>1){
+								cellsInCurCol.push({index:k-rowspan,rowspan:rowspan});
+								count++;
+							}
+							rowspan=1;//从这个不一样的值开始重新计数,且记录当前值
+							preVal=val;
+						}else{
+							rowspan++;//合并,
+							//当最后的几行可以可并时
+							if(rowspan>1&&k==end-1){
+								cellsInCurCol.push({index:k-rowspan+1,rowspan:rowspan});
+								count++;
+							}
+						}
+					}
+					k++;
+				}while(k<end);
+				
+			}
+			if(cellsInCurCol.length){
+				cellsInPreCol=mergeCells[field]=cellsInCurCol;
+			}else{//如果某列没有可合并的单元格，则终止搜索
+				break;
+			}
+		}
+		//console.log('mergeCells:',JSON.stringify(mergeCells,null,4));
+		return count?mergeCells:null;
+	};
+	this.setSortFields=function(sortFields,noReflesh){//noReflesh仅内部使用
+		sortFields=cb.clone(sortFields);
+		if (!this._before("sort")) {//执行前动作被阻止时，使视图和model保持一致
+			var args = new cb.model.PropertyChangeArgs(this._name, "sortFields",this._data.sortFields);
+			this.PropertyChange(args);
+			return;
+		}
+		if(this.set('sortFields',sortFields)!==false && !noReflesh && sortFields.length){//如果指定不刷新这不重排序
+			this._sort(sortFields);
+			this._after("sort");
+		}
+		
+	};//应该使用副本数据，避免别处的修改印象model内部状态
+	this.getSortFields=function(){return this.get('sortFields');};
+	
     //#region getState
     this.setRowState = function (rowIndex, propertyName, value) {
         this.setState(rowIndex, null, propertyName, value);
@@ -682,10 +771,8 @@ cb.model.Model3D = function (parent, name, data) {
         this._after("removeAll");
     };
 
-    this.sort = function (fields) {
-        if (!this._before("sort")) {
-            return;
-        }
+    this._sort = function (fields) {
+        
         var rows = [];
         var cache = this._data.Cache;
         if (cache) {
@@ -738,11 +825,10 @@ cb.model.Model3D = function (parent, name, data) {
 		
 		rows.sort(fn);
         this._data.Rows = rows;
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "sort", this._data.Rows));
-        this._after("sort");
-		
+		//显示的数据集（包括排序信息）改变后，刷新界面显示
+		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "displayRows", this._data.Rows));
     };
-
+	
     this.setDirty = function (rowIndex, value) {
         //this.set(rowIndex, null, "IsDirty", value);
     };

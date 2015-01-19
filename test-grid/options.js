@@ -12,8 +12,9 @@ var options={
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		multiSort:true,		//是否支持多列排序，默认true
-		fieldNames:['title','duration','percentComplete','start','finish','effortDriven'],//说明字段排序
+		fieldNames:['duration','effortDriven','start','finish','percentComplete','title'],//说明字段排序
 		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
+		mergeState:true,
 		//所有列的定义(有序)
 		Columns:{
 			'title':{

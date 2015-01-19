@@ -1,23 +1,105 @@
+cb.isEqual=function(obj1,obj2){
+		var isEqual=cb.isEqual;
+		//相等直接返回
+		if(obj1==obj2){return true;}
+		//不等且有一个为普通类型时，返回
+		if(typeof obj1!=='object'||typeof obj2!=='object'){
+			return false;
+		}
+		
+		//如果两个都是对象，分数组和普通对象分别处理
+		var type1=Object.prototype.toString.apply(obj1),
+			type2=Object.prototype.toString.apply(obj2);
+		//有一个为数组时	
+		if(type1==='[object Array]' || type2==='[object Array]'){
+			if(type1===type2){//都为数组
+				if(obj1.length!==obj2.length)return false;
+				for(var i=obj1.length-1;i>=0;i--){
+					if(!isEqual(obj1[i],obj2[i]))return false;
+				}
+				return true;
+			}else{
+				return false;
+			}
+		}else{//都为对象
+			var equalProps={};
+			for(var p in obj1){
+				if(!isEqual(obj1[p],obj2[p])){
+					return false;
+				}else{
+					//记录这个属性，避免重复比较
+					equalProps[p]=true;
+				}
+			}
+			for(var p in obj2){
+				if(!equalProps[p] && !isEqual(obj1[p],obj2[p])){
+					return false;
+				}
+			}
+			return true;
+		}
+		
+	};
 cb.binding.DataGridBinding = function (mapping, parent) {
+	
     cb.binding.BaseBinding.call(this, mapping, parent);
+	//重写PropertyChangeEvent、get_method方法
+	cb.binding.DataGridBinding.prototype.Model2UI = cb.binding.DataGridBinding.prototype.PropertyChangeEvent = function (evt) {
+		cb.console.log("PropertyChangeEvent", evt);
+		if (!evt) return;
+		var control = this.getControl();
+		if (!control) return;
+		if (cb.isEqual(this.getProperty(control, evt.PropertyName) ,evt.PropertyValue))//如果属性值相等，则不触发刷新
+			return;
+		this.setProperty(control, evt.PropertyName, evt.PropertyValue);
 
-    this._onCellChange = function (rowIndex, cellName, cellValue) {
+		cb.console.log("PropertyChangeEvent", evt);
+	}
+	cb.binding.DataGridBinding.prototype.get_method = function (prefix, control, propertyName) {
+		if (!control || !propertyName || !prefix) return;
+		var propertyNameLower = String.toLowerCase(propertyName);
+		if (!propertyNameLower) return;
+		if (propertyNameLower.indexOf(prefix) == 0)
+			propertyNameLower = propertyNameLower.substring(3);
+		propertyName=propertyName.substring(0, 1).toLowerCase() + propertyName.substring(1, propertyName.length);
+		var method = this["_" + prefix + "_" + propertyName];
+		if (method) return method;
+
+		var controlMethodName = prefix + propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1, propertyName.length);
+		if (!control[controlMethodName]) return;
+
+		//动态创建方法
+		method = this["_" + prefix + "_" + propertyNameLower] = function (ctrl, propertyValue) {
+			if (ctrl[controlMethodName])
+				ctrl[controlMethodName].call(ctrl, propertyValue);
+		};
+		return method;
+	};
+    this._onSortFieldsChange = function (args) {
+        var model = this.getModel();
+        if (!model) return;
+		model.setSortFields(args.sortFields,args.noReflesh);
+    };
+	this._onMergeStateChange=function(merge){
+		var model = this.getModel();
+		model.setMergeState(merge);
+	};
+	this._set_displayRows=function(control,rows){
+		control.loadData(rows);
+	};
+	//合并状态修改后，处理显示
+	this._set_mergeInfo=function(control,args){
+		if(args.mergeCells){
+			control.mergeCells(args.mergeCells);
+		}else{
+			control.loadData(args.rows);
+		}
+	};
+	this._onCellChange = function (rowIndex, cellName, cellValue) {
         var model = this.getModel();
         if (!model) return;
         if (model.cellChange) model.cellChange(rowIndex, cellName, cellValue);
     };
-
-    this._onSort = function (args) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.sort) {
-            model.sort(args);
-        }
-    };
-	this._set_sort=function(control,rows){
-		control.loadData(rows);
-	};
-	
     this._onSelectedRowsChanged = function (selectedRows) {
         var model = this.getModel();
         if (!model) return;
@@ -92,8 +174,12 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay) {
             control.un("onCellChange", this._onCellChange);
             control.on("onCellChange", this._onCellChange, this);
-            control.un("sort", this._onSort);
-            control.on("sort", this._onSort, this);
+			//mergeCells
+			
+			control.un("mergeStateChange", this._onMergeStateChange);
+            control.on("mergeStateChange", this._onMergeStateChange, this);
+            control.un("sortFieldsChange", this._onSortFieldsChange);
+            control.on("sortFieldsChange", this._onSortFieldsChange, this);
             control.un("onSelectedRowsChanged", this._onSelectedRowsChanged);
             control.on("onSelectedRowsChanged", this._onSelectedRowsChanged, this);
             control.un("onAddNewRow", this._onAddNewRow);

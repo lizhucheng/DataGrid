@@ -345,7 +345,7 @@ DataGrid.prototype={
 			}else{
 				//sortFields=$.extend([],this._sortFields);
 				//本来这个地方应该使用副本的，此处不处理状态，只收集参数数据；但考虑到，事件后肯定要更新状态，所以就容忍局部的状态不统一了
-				sortFields=dg._sortFields;
+				sortFields=cb.clone(dg.getSortFields());
 				var existed=false;
 				$.each(sortFields,function(i,item){
 					if(item[0]===field){
@@ -414,7 +414,63 @@ DataGrid.prototype={
 		
 		$('.viewBody',$el).hide();
 		$('.viewBody tbody',$el).html(html);
+		if(this.getMergeState()){
+			this.mergeCells(this._getMergeCells(data));
+		}
 		$('.viewBody').show();
+	},
+	_getMergeCells:function(data){
+		var cols=this.cols;
+		var count=0;//统计一共有多少可合并的单元格
+		var mergeCells={};
+		var rows=data;
+		var cellsInPreCol=[{index:0,rowspan:rows.length}];//前列中合并的单元格信息
+		var cellsInCurCol;//当前列的合并单元格信息，当前列中合并的单元格信息依赖与前列的合并单元格信息
+		var field,//当前字段名
+			preMergeCell,preVal,val;//当前处理的列参照的前一列中合并的单元格
+		for(var i=0,len=cols.length;i<len;i++){
+			field=cols[i][FIELDNAME_PROP];
+			cellsInCurCol=[];
+			for(var j=0;j<cellsInPreCol.length;j++){
+				preMergeCell=cellsInPreCol[j];
+				var k=preMergeCell['index'],end=k+preMergeCell.rowspan;
+				var rowspan=0;
+				do{
+					//val=this.get(k,field);
+					val=rows[k][field]&&typeof rows[k][field]=='object'?rows[k][field].value:rows[k][field];
+					if(!rowspan){
+						rowspan++;
+						preVal=val;	
+							
+					}else{
+						if(val!==preVal){//如果和前面的只不相等，则只合并前面扫描过的行单元格
+							if(rowspan>1){
+								cellsInCurCol.push({index:k-rowspan,rowspan:rowspan});
+								count++;
+							}
+							rowspan=1;//从这个不一样的值开始重新计数,且记录当前值
+							preVal=val;
+						}else{
+							rowspan++;//合并,
+							//当最后的几行可以可并时
+							if(rowspan>1&&k==end-1){
+								cellsInCurCol.push({index:k-rowspan+1,rowspan:rowspan});
+								count++;
+							}
+						}
+					}
+					k++;
+				}while(k<end);
+				
+			}
+			if(cellsInCurCol.length){
+				cellsInPreCol=mergeCells[field]=cellsInCurCol;
+			}else{//如果某列没有可合并的单元格，则终止搜索
+				break;
+			}
+		}
+		//console.log('mergeCells:',JSON.stringify(mergeCells,null,4));
+		return count?mergeCells:null;
 	},
 	setColWidth:function(field,width){
 		if(!this._nameColMap[field])return;
@@ -606,15 +662,13 @@ DataGrid.prototype={
 			}
 		}
 
-		this._sortFields=fields;
-		
+		this.sortFields=cb.clone(fields);
+		var args={sortFields:fields,noReflesh:false};
 		//说明不刷新数据和没指定排序字段时不更新model
-		if(!noReflesh && fields.length){
-			this.excute('sort',fields);
+		if(noReflesh ||!fields.length){
+			args.noReflesh=true;
 		}
-	},
-	sortBy:function(fields){
-		this._sortBy(fields);	
+		this.excute('sortFieldsChange',args);
 	},
 	setData:function(data){
 		//数据适配
@@ -636,7 +690,47 @@ DataGrid.prototype={
 		this.init(options);
 		this.render(data.Rows);
 	},
-	
+	setSortFields:function(sortFields){
+		if(Object.prototype.toString.call(sortFields)!=='[object Array]')return;
+		if(cb.isEqual(sortFields,this.sortFields))return;
+		
+		this._sortBy(sortFields);
+	},
+	sortBy:this.setSortFields,
+	getSortFields:function(){
+		return this.sortFields;
+	},
+	setMergeState:function(merge){
+		merge=!!merge;	
+		if(this.mergeState===merge){return;}
+		this.mergeState=merge;
+		this.excute('mergeStateChange',merge);
+	},
+	getMergeState:function(){
+		return this.mergeState;
+	},
+	//根据指定合并信息合并单元格
+	mergeCells:function(mergeInfo){
+		//去掉表头行,且转换为数组
+		var rows=[].slice.call($('.viewBody table',this.$el)[0].rows,1);;
+		//合并时要从后面的列开始合并，否则不好定位要合并的单元格的水平索引
+		var cols=this.cols;
+		for(var k=cols.length-1;k>0;k--){
+			var field=cols[k][FIELDNAME_PROP];
+			if(mergeInfo[field]){
+				var cellsInCol=mergeInfo[field];
+				for(var i=cellsInCol.length-1;i>=0;i--){
+					var cell=cellsInCol[i];
+					//先删除将被合并的单元格
+					var j=cell.index+1,end=cell.index+cell.rowspan;
+					for(;j<end;j++){
+						rows[j].removeChild(rows[j].cells[k]);
+					}
+					rows[cell.index].cells[k].setAttribute('rowspan',cell.rowspan);
+				}
+			}
+		}
+	},
 	___end:''
 }
 //自定义事件机制
