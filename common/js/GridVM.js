@@ -595,7 +595,7 @@ cb.model.Model3D = function (parent, name, data) {
 
         this.setEditRowModel(this._focusedRowIndex);
 
-        var args = new cb.model.PropertyChangeArgs(this._name, "FocusedRow", index, oldValue);
+        var args = new cb.model.PropertyChangeArgs(this._name, "focusedRow", index, oldValue);
         this.PropertyChange(args);
 
         this._after("setFocusedRow", index);
@@ -615,34 +615,46 @@ cb.model.Model3D = function (parent, name, data) {
 		rows.length >= 1 ? this.setFocusedRow(this._data.Rows[rows[0]]) : this.setFocusedRow(null);//使第一个参数对应的行获取焦点
         this._after("select", this);
     };
-    this.unSelect = function (rows) {
-		if(this._before("unSelect", this)===false)return;
+    this.unselect = function (rows) {
+		if(this._before("unselect", this)===false)return;
 		if (!cb.isArray(rows)) rows = [rows];	
 		
         cb.each(rows, function (index) { this._data.Rows[index].isSelected = false; }, this);
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "unSelect", rows));
-        this._after("unSelect", this);
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "unselect", rows));
+        this._after("unselect", this);
     };
 
     this.selectAll = function () {
         if(this._before("selectAll", this)===false)return;//内部使用事件名时，用驼峰风格，外边监听事件名时用小写
         cb.each(this._data.Rows, function (row) { row.isSelected = true; }, this);
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "selectAll"));
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "selectAll","selectAll"));//changeArgs中当前值不能等于原来的值，所以不能同时为空
         this._after("selectAll", this);
     };
-    this.unSelectAll = function () {
-		if(this._before("unSelectAll", this)===false)return;
+    this.unselectAll = function () {
+		if(this._before("unselectAll", this)===false)return;
         cb.each(this._data.Rows, function (row) { row.isSelected = false; }, this);
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "unSelectAll"));
-        this._after("unSelectAll", this);
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "unselectAll","unselectAll"));
+        this._after("unselectAll", this);
         
     };
+	//支持多页选中
 	this.getSelectedRows = function () {
         var selectedRows = [];
 		var rows=this._data.allRows;
         for (var i = 0, length = rows.length; i < length; i++) {
             if (rows[i].isSelected) {
                 selectedRows.push(rows[i]);
+            }
+        }
+        return selectedRows;
+    };
+	//获取当前显示的行数据中选中的行,
+	this.getPageSelectedIndex=function () {
+        var selectedRows = [];
+		var rows=this._data.Rows;
+        for (var i = 0, length = rows.length; i < length; i++) {
+            if (rows[i].isSelected) {
+                selectedRows.push(i);
             }
         }
         return selectedRows;

@@ -82,11 +82,13 @@ DataGrid.BORDERWIDTH=1;
 DataGrid.ROWNOCOL={
 	$name:'__rowNo',
 	width:30,
+	sortable:false,
 	resizable:false
 };
 DataGrid.CHECKBOXCOL={
 	$name:'__chkBox',
 	width:30,
+	sortable:false,
 	resizable:false,
 	content:'<input type="checkbox" />'
 };
@@ -370,6 +372,28 @@ DataGrid.prototype={
 			//如果点击后变为列排序状态变为不排序，则不从model刷新视图
 			dg._sortBy(sortFields,nextStatus==='none'?true:false);
 		})
+		
+		//复选框事件处理
+		if(this.showCheckBox){
+			$('.header .chkAll input',this.$el).click(function(evt){
+				if(this.checked){
+					dg.selectAll();
+				}else{
+					dg.unselectAll();
+				}
+			});
+			//内容行checkbox点击事件处理
+			this.$el.on('click','input.checkable',function(evt){
+				var row=$(this).closest('tr')[0],
+					rows=dg._getRows(),
+					index=rows.indexOf(row);
+				if(this.checked){					
+					dg.select(index);
+				}else{
+					dg.unselectAll(index);
+				}
+			});
+		}
 	},
 	_fixScroll:function(evt){
 		var view=this.$el.children('.view');
@@ -602,7 +626,7 @@ DataGrid.prototype={
 				}else if(field===DataGrid.ROWNOCOL[FIELDNAME_PROP]){
 					value=s+1;
 				}else{
-					value='<input type="checkbox" />'
+					value='<input class="checkable" type="checkbox" />'
 				}
 				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value,i<=frozenIndex?left:0,!i);
 			}
@@ -714,7 +738,7 @@ DataGrid.prototype={
 	//根据指定合并信息合并单元格
 	mergeCells:function(mergeInfo){
 		//去掉表头行,且转换为数组
-		var rows=[].slice.call($('.viewBody table',this.$el)[0].rows,1);;
+		var rows=this._getRows();
 		//合并时要从后面的列开始合并，否则不好定位要合并的单元格的水平索引
 		var cols=this.cols;
 		for(var k=cols.length-1;k>0;k--){
@@ -733,8 +757,115 @@ DataGrid.prototype={
 			}
 		}
 	},
+	//选择行，焦点管理
+	select:function(rowIndexs){
+		var rows=this._getRows();
+		var arr=[];
+		$.each(rowIndexs,function(i,rowIndex){
+			arr.push(rows[rowIndex]);
+		});
+		$.fn.addClass.call(arr,SELECTED);
+		if(this.showCheckBox){
+			var chkFieldIndex=this._getColIndex(DataGrid.CHECKBOXCOL[FIELDNAME_PROP]);
+			$.each(arr,function(i,row){
+				row.cells[chkFieldIndex].getElementsByTagName('input')[0].checked=true;
+			});
+			if(this._isAllChecked()){
+				$('.header .chkAll input',this.$el).attr('checked',true);
+			}
+		}
+		
+		this.excute('select',rowIndexs);
+	},
+	unselect:function(rowIndexs){
+		var rows=this._getRows();
+		var arr=[];
+		$.each(rowIndexs,function(i,rowIndex){
+			arr.push(rows[rowIndex]);
+		});
+		$.fn.removeClass.call(arr,SELECTED);
+		if(this.showCheckBox){
+			var chkFieldIndex=this._getColIndex(DataGrid.CHECKBOXCOL[FIELDNAME_PROP]);
+			$.each(arr,function(i,row){
+				row.cells[chkFieldIndex].getElementsByTagName('input')[0].checked=false;
+			});
+			$('.header .chkAll input',this.$el).attr('checked',false);
+		}
+		this.excute('select',rowIndexs);
+	},
+	selectAll:function(){
+		this._selectAll();
+		this.excute('selectAll');
+	},
+	unselectAll:function(){//是否内部调用
+		this._unselectAll();
+		this.excute('unselectAll');
+	},
+	//控件内部使用的方法，不抛出事件
+	_selectAll:function(){
+		var rows=this._getRows(),len=rows.length;
+		$.fn.addClass.call(rows,SELECTED);
+		if(this.showCheckBox){
+			var chkFieldIndex=this._getColIndex(DataGrid.CHECKBOXCOL[FIELDNAME_PROP]);
+			$.each(rows,function(i,row){
+				row.cells[chkFieldIndex].getElementsByTagName('input')[0].checked=true;
+			});
+			$('.header .chkAll input',this.$el)[0].checked=true;
+		}
+		
+	},
+	_unselectAll:function(){
+		var rows=this._getRows(),len=rows.length;
+		$.fn.removeClass.call(rows,SELECTED);
+
+		if(this.showCheckBox){
+			var chkFieldIndex=this._getColIndex(DataGrid.CHECKBOXCOL[FIELDNAME_PROP]);
+			$.each(rows,function(i,row){
+				row.cells[chkFieldIndex].getElementsByTagName('input')[0].checked=false;
+			});
+			$('.header .chkAll input',this.$el)[0].checked=false;
+		}
+	},
+	setFocusedRow:function(index){
+		var rows=this._getRows(),len=rows.length;
+		if(index<0||index>=len)index=-1;
+		
+		$.fn.removeClass.call(rows,FOCUSED);
+		if(index>=0){
+			rows[index].className+=' '+FOCUSED;
+		}
+		this.excute('focusChange',index);
+	},
+	//获取选中行的索引
+	getSelectedRows:function(){
+		var rows=this._getRows(),
+			selected=[];
+		var dg=this;
+		$.each(rows,function(i,row){
+			if(dg._isSelected(row)){
+				selected.push(i);
+			}
+		});
+		return selected;
+	},
+	_isSelected:function(tr){
+		return tr.className.split(rwhitespace).indexOf(SELECTED)>-1;
+	},
+	//获取数据行对应的tr数组
+	_getRows:function(){
+		return [].slice.call($('.viewBody table',this.$el)[0].rows,1);
+	},
+	//判断是否选中了所有展示的行
+	_isAllChecked:function(){
+		return this.getSelectedRows().length===this._getRows().length;
+	},
+	
 	___end:''
 }
+
+//选中行classname和当前焦点行classname
+var SELECTED='selected',FOCUSED='focused';
+var rwhitespace=/\s+/;
 //自定义事件机制
 $.extend(DataGrid.prototype,cb.events);
 }(jQuery)

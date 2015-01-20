@@ -95,15 +95,70 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.loadData(args.rows);
 		}
 	};
+	//处理model的行选择事件,焦点管理
+	this._set_select=function(control,rowIndexs){
+		if(this._isSelectedSyc())return;
+		
+		control.select(rowIndexs);
+	};
+	this._set_unselect=function(control,rowIndexs){
+		if(this._isSelectedSyc())return;
+		
+		control.unselect(rowIndexs);
+	};
+	this._set_selectAll=function(control){
+		if(this._isSelectedSyc())return;
+		
+		control.selectAll();
+	};
+	this._set_unselectAll=function(control){
+		if(this._isSelectedSyc())return;
+		
+		control.unselectAll();
+	};
+	
+	this._set_focusedRow=function(control,rowIndex){
+		control.setFocusedRow(rowIndex);
+	};
+	//选中状态是否已经同步（内部辅组方法）
+	this._isSelectedSyc=function(){
+		return cb.isEqual(this.getControl().getSelectedRows(),this.getModel().getPageSelectedIndex());
+	};
+	//处理控件触发的行选择和焦点改变事件
+	this._onSelect=function(rowIndexs){
+		if(this._isSelectedSyc())return;
+		
+		var model = this.getModel();
+		model.select(rowIndexs);
+	};
+	this._onUnselect=function(rowIndexs){
+		if(this._isSelectedSyc())return;
+		
+		var model = this.getModel();
+		model.unselect(rowIndexs);
+	};
+	this._onSelectAll=function(){
+		if(this._isSelectedSyc())return;
+		
+		var model = this.getModel();
+		model.selectAll();
+	};
+	this._onUnselectAll=function(){
+		if(this._isSelectedSyc())return;
+		
+		var model = this.getModel();
+		model.unselectAll();
+	};
+	this._onFocusChange=function(index){
+		var model = this.getModel();
+		model.setFocusedRow(index);
+	};
+	
+	//
 	this._onCellChange = function (rowIndex, cellName, cellValue) {
         var model = this.getModel();
         if (!model) return;
         if (model.cellChange) model.cellChange(rowIndex, cellName, cellValue);
-    };
-    this._onSelectedRowsChanged = function (selectedRows) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.onSelect) model.onSelect(selectedRows);
     };
 
     this._onAddNewRow = function (rowIndex) {
@@ -172,16 +227,27 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         var control = this.getControl();
         if (!model || !control) return;
         if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay) {
-            control.un("onCellChange", this._onCellChange);
-            control.on("onCellChange", this._onCellChange, this);
-			//mergeCells
-			
+
 			control.un("mergeStateChange", this._onMergeStateChange);
             control.on("mergeStateChange", this._onMergeStateChange, this);
             control.un("sortFieldsChange", this._onSortFieldsChange);
             control.on("sortFieldsChange", this._onSortFieldsChange, this);
-            control.un("onSelectedRowsChanged", this._onSelectedRowsChanged);
-            control.on("onSelectedRowsChanged", this._onSelectedRowsChanged, this);
+			
+            control.un("select", this._onSelect);
+            control.on("select", this._onSelect, this);
+			control.un("unselect", this._onUnselect);
+            control.on("unselect", this._onUnselect, this);
+			control.un("selectAll", this._onSelectAll);
+            control.on("selectAll", this._onSelectAll, this);
+			control.un("unselectAll", this._onUnselectAll);
+            control.on("unselectAll", this._onUnselectAll, this);
+			control.un("focusChange", this._onFocusChange);
+            control.on("focusChange", this._onFocusChange, this);
+			
+			//
+			control.un("onCellChange", this._onCellChange);
+            control.on("onCellChange", this._onCellChange, this);
+			
             control.un("onAddNewRow", this._onAddNewRow);
             control.on("onAddNewRow", this._onAddNewRow, this);
             control.un("onDeleteRows", this._onDeleteRows);
