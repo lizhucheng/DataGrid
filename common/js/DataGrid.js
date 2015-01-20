@@ -428,7 +428,9 @@ DataGrid.prototype={
 		var cellsInCurCol;//当前列的合并单元格信息，当前列中合并的单元格信息依赖与前列的合并单元格信息
 		var field,//当前字段名
 			preMergeCell,preVal,val;//当前处理的列参照的前一列中合并的单元格
-		for(var i=0,len=cols.length;i<len;i++){
+		var i=0+this.showCheckBox+this.showRowNo;
+		
+		for(var i=0+this.showCheckBox+this.showRowNo,len=cols.length;i<len;i++){
 			field=cols[i][FIELDNAME_PROP];
 			cellsInCurCol=[];
 			for(var j=0;j<cellsInPreCol.length;j++){
