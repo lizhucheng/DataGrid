@@ -611,8 +611,9 @@ cb.model.Model3D = function (parent, name, data) {
             if (index == this._data.Rows.length) return;
             this._data.Rows[index].isSelected = true;
         }, this);
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "select", rows));
-		rows.length >= 1 ? this.setFocusedRow(this._data.Rows[rows[0]]) : this.setFocusedRow(null);//使第一个参数对应的行获取焦点
+		//由于下面还有使用rows，所以不能直接把rows作为参数传到外部，对象参数可能被修改
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "select", cb.clone(rows)));
+		rows.length >= 1 ? this.setFocusedRow(rows[0]) : this.setFocusedRow(-1);//使第一个参数对应的行获取焦点
         this._after("select", this);
     };
     this.unselect = function (rows) {

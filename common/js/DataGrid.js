@@ -390,10 +390,18 @@ DataGrid.prototype={
 				if(this.checked){					
 					dg.select(index);
 				}else{
-					dg.unselectAll(index);
+					dg.unselect(index);
 				}
 			});
 		}
+		
+		//点击行时，行获得焦点
+		this.$el.on('click','tr',function(evt){
+				var row=$(this).closest('tr')[0],
+					rows=dg._getRows(),
+					index=rows.indexOf(row);
+				dg.setFocusedRow(index);
+			});
 	},
 	_fixScroll:function(evt){
 		var view=this.$el.children('.view');
@@ -759,6 +767,9 @@ DataGrid.prototype={
 	},
 	//选择行，焦点管理
 	select:function(rowIndexs){
+		if(!cb.isArray(rowIndexs)){
+			rowIndexs=[rowIndexs];
+		}
 		var rows=this._getRows();
 		var arr=[];
 		$.each(rowIndexs,function(i,rowIndex){
@@ -771,13 +782,17 @@ DataGrid.prototype={
 				row.cells[chkFieldIndex].getElementsByTagName('input')[0].checked=true;
 			});
 			if(this._isAllChecked()){
-				$('.header .chkAll input',this.$el).attr('checked',true);
+				//此处不能用.attr('checked',true),浏览器存在bug，只有第一次通过属性设置checkbox/radio的checked属性时有效
+				$('.header .chkAll input',this.$el)[0].checked=true;
 			}
 		}
 		
 		this.excute('select',rowIndexs);
 	},
 	unselect:function(rowIndexs){
+		if(!cb.isArray(rowIndexs)){
+			rowIndexs=[rowIndexs];
+		}
 		var rows=this._getRows();
 		var arr=[];
 		$.each(rowIndexs,function(i,rowIndex){
@@ -791,7 +806,7 @@ DataGrid.prototype={
 			});
 			$('.header .chkAll input',this.$el).attr('checked',false);
 		}
-		this.excute('select',rowIndexs);
+		this.excute('unselect',rowIndexs);
 	},
 	selectAll:function(){
 		this._selectAll();

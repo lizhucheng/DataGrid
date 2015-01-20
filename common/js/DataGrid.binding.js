@@ -84,8 +84,13 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		var model = this.getModel();
 		model.setMergeState(merge);
 	};
+	
 	this._set_displayRows=function(control,rows){
 		control.loadData(rows);
+		//每次重新加载数据后要重新同步选中状态，及焦点状态
+		var model=this.getModel();
+		control.select(model.getPageSelectedIndex());
+		control.setFocusedRow(model.getFocusedRow());
 	};
 	//合并状态修改后，处理显示
 	this._set_mergeInfo=function(control,args){
@@ -93,6 +98,9 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.mergeCells(args.mergeCells);
 		}else{
 			control.loadData(args.rows);
+			var model=this.getModel();
+			control.select(model.getPageSelectedIndex());
+			control.setFocusedRow(model.getFocusedRow());
 		}
 	};
 	//处理model的行选择事件,焦点管理

@@ -59,7 +59,7 @@ var options={
 		//cellStyler类似 class名带前缀"cellStyler-"
 		rowStyler:function(rowNo,record){},//rowNo为行序号，record为行数据记录（json对象）
 		cellStyler:function(rowNo,colNo){},
-		Rows:getTestData(2)
+		Rows:getTestData(10)
 	};
 
 

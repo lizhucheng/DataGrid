@@ -3,10 +3,19 @@
 	overflow:hidden;
 }
 /*必须给表头和固定区设置背景，否则其下面的内容会透明出来*/
-.grid  .viewHeader,
-.grid  .cellBorder{
-	background-color:#fff;
+/*内容区行交互样式*/
+.grid{background-color:#fff;}/*grid必需设置默认背景色*/
+.grid  tbody *{background-color:inherit;}
+.grid  tbody  tr:hover{
+	background-color:#eaf2ff;
 }
+.grid  tbody  tr.selected{
+	background-color:#0f0;
+}
+.grid  tbody  tr.focused{
+	background-color:#0ff;/*焦点行的背景色应该和选中行相近，且较选中行浅*/
+}
+
 .grid  .view{
 	width:100%;
 	height:100%;
@@ -63,6 +72,7 @@
 	position:relative;
 	padding:0;
 	width:120px;
+	line-height:27px;/*设置最小行高*/
 }
 
 .grid   .cell>.cellBorder{
@@ -92,6 +102,7 @@
 	top:0;
 	left:0;
 	padding:2px;
+	margin:1px;
 }
 
 /*处理层级关系*/
@@ -100,6 +111,7 @@
 }
 .grid    .cellBorder{
 	z-index:6;
+	/*background-color:transparent;*/
 }
 .grid    .cellContent{
 	z-index:7;
@@ -110,7 +122,7 @@
 }
 .grid    .frozen~.cell  .cellBorder{
 	z-index:3;
-	background-color:transparent;
+	/*background-color:transparent;*/
 }
 .grid    .frozen~.cell  .cellContent{
 	z-index:4;
@@ -193,6 +205,3 @@
 	background:url(../images/sort_icons.png) no-repeat -16px 0;
 }
 
-.grid .cell{
-	line-height:27px;/*设置最小行高*/
-}
