@@ -622,7 +622,7 @@ DataGrid.prototype={
 			arr[j++]='<div class="cellContent">';
 			arr[j++]=value;	
 			arr[j++]='</div><div class="cellBorder" style="background-color:';
-			arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
+			//arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
 			arr[j++]=';"></div></td>';
 		}else{
 			arr[j++]='<div class="cellContent" style="left:';
@@ -630,7 +630,7 @@ DataGrid.prototype={
 			arr[j++]='px;">';
 			arr[j++]=value;	
 			arr[j++]='</div><div class="cellBorder" style="background-color:';
-			arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
+			//arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
 			arr[j++]=';left:';
 			arr[j++]=left;
 			arr[j++]='px;"></div></td>';

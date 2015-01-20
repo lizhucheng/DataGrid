@@ -16,24 +16,27 @@ cb.model.Model3D = function (parent, name, data) {
     this._listeners = [];
     //this._data = data || { Rows: [], Columns: {} }; 基类中赋值,//存储自身的信息，readOnly，disabled等
     this._data.Mode = this._data.Mode || "Local";
+	/*Rows数据标识当前视图中展示的数据行；模型中有一个表示按序存储的行数据结构allRows，代表所有数据，这些数据不一定都已在本地。
+	Rows和allRows交互，从中获取数据，Rows保留allRows中行数据的引用，使修改同步；allRows内部和服务端交互，负责从服务端请求页数据和提交本地修改。
+	allRows提供分页配置管理。
+	*/
     this._data.Rows = this._data.Rows || []; //this._data.Rows = [{ ID: { readOnly: true, Value: 111 }, Name: 22, readOnly: true}]
+	this._data.allRows=this._data.allRows||this._data.Rows;
+	
     this._data.Columns = this._data.Columns || {}; //this._data.Columns = { ID: { readOnly: true, disabled: true }, Name: {} };
 	
 	this._data.sortFields=this._data.sortFields||[];//排序信息
 	this._data.mergeState=this._data.mergeState||false;//仅浏览态可用
 	
     //var 基本的值包涵 = { readOnly: true, disabled: true, Value: 2 }; //原子数据
-    this._focusedRow = this._data.Rows[0] || null;
-    this._focusedRowIndex = 0;
+    //this._focusedRow = this._data.Rows[0] || null;
+	
+	//当前获取焦点的行在Rows索引位置，只有Rows中的行才能设置为聚焦行
+    this._focusedRowIndex = this._data.Rows.length?0:-1;
 
     this._editRowModel = null;
 
     this._data.PageInfo = this._data.PageInfo || { pageSize: 0, pageIndex: 1, pageCount: 1, totalCount: 0 };
-
-    //每一行需要一个唯一能定位的内部标志
-    for (var i = 0; i < this._data.Rows.length; i++) {
-        this._$setId(this._data.Rows[i]);
-    }
 
     this.get = function (rowIndex, cellName, propertyName) {
         if (arguments.length == 1) {
@@ -392,33 +395,7 @@ cb.model.Model3D = function (parent, name, data) {
             return true;
         }
     };
-    this.setFocusedRow = function (row) {
-        if (!row) {
-            this._focusedRow = null;
-            this._focusedRowIndex = -1;
-            this.getEditRowModel().clear();
-            return;
-        }
-        if (this._focusedRow == row)
-            return;
-
-        if (!this._before("setFocusedRow", row))
-            return;
-
-        var oldValue = this._focusedRow;
-        this._focusedRow = row;
-        this._focusedRowIndex = this._data.Rows.indexOf(row);
-
-        this.setEditRowModel(this._focusedRow);
-
-        var args = new cb.model.PropertyChangeArgs(this._name, "FocusedRow", row, oldValue);
-        this.PropertyChange(args);
-
-        this._after("setFocusedRow", row);
-    };
-    this.getFocusedRow = function () {
-        return this._focusedRow;
-    };
+    
 
     this.setColumns = function (columns) {
         if (!this._before("setColumns", columns))
@@ -599,63 +576,76 @@ cb.model.Model3D = function (parent, name, data) {
     this.getRowIndex = function (row) {
         return this._data.Rows.indexOf(row);
     };
-    this.getSelectedRows = function () {
+    //焦点管理
+	this.setFocusedRow = function (index) {
+		var rows=this._data.Rows;
+		if(index<0&& index>=rows.length){
+			this._focusedRowIndex = -1;
+            this.getEditRowModel().clear();
+            return;
+		}
+        if (this._focusedRowIndex == index)
+            return;
+
+        if (!this._before("setFocusedRow", index))
+            return;
+
+        var oldValue = this._focusedRowIndex;
+        this._focusedRowIndex = index;
+
+        this.setEditRowModel(this._focusedRowIndex);
+
+        var args = new cb.model.PropertyChangeArgs(this._name, "FocusedRow", index, oldValue);
+        this.PropertyChange(args);
+
+        this._after("setFocusedRow", index);
+    };
+    this.getFocusedRow = function () {
+        return this._focusedRowIndex;
+    };
+    //#region 选择、全选支持
+    this.select = function (rows) {
+		this._before("select", this);
+        if (!cb.isArray(rows)) rows = [rows];
+        cb.each(rows, function (index) {
+            if (index == this._data.Rows.length) return;
+            this._data.Rows[index].isSelected = true;
+        }, this);
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "select", rows));
+		rows.length >= 1 ? this.setFocusedRow(this._data.Rows[rows[0]]) : this.setFocusedRow(null);//使第一个参数对应的行获取焦点
+        this._after("select", this);
+    };
+    this.unSelect = function (rows) {
+		if(this._before("unSelect", this)===false)return;
+		if (!cb.isArray(rows)) rows = [rows];	
+		
+        cb.each(rows, function (index) { this._data.Rows[index].isSelected = false; }, this);
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "unSelect", rows));
+        this._after("unSelect", this);
+    };
+
+    this.selectAll = function () {
+        if(this._before("selectAll", this)===false)return;//内部使用事件名时，用驼峰风格，外边监听事件名时用小写
+        cb.each(this._data.Rows, function (row) { row.isSelected = true; }, this);
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "selectAll"));
+        this._after("selectAll", this);
+    };
+    this.unSelectAll = function () {
+		if(this._before("unSelectAll", this)===false)return;
+        cb.each(this._data.Rows, function (row) { row.isSelected = false; }, this);
+        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "unSelectAll"));
+        this._after("unSelectAll", this);
+        
+    };
+	this.getSelectedRows = function () {
         var selectedRows = [];
-        var rows = this._data.Rows;
+		var rows=this._data.allRows;
         for (var i = 0, length = rows.length; i < length; i++) {
             if (rows[i].isSelected) {
                 selectedRows.push(rows[i]);
             }
         }
         return selectedRows;
-    };
-
-    //#region 选择、全选支持
-    this.onSelect = function (rows) {
-        this._before("Select", this);
-        if (!cb.isArray(rows)) rows = [rows];
-        this.unSelectAll();
-        this.select(rows);
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "Select", rows));
-        this._after("Select", this);
-    };
-    this.onUnSelect = function (rows) {
-        this._before("UnSelect", this);
-        this.selectAll();
-        this.unSelect(rows);
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "UnSelect", rows));
-        this._after("UnSelect", this);
-    };
-    this.select = function (rows) {
-        if (!cb.isArray(rows)) rows = [rows];
-        cb.each(rows, function (index) {
-            if (index == this._data.Rows.length) return;
-            this._data.Rows[index].isSelected = true;
-        }, this);
-        rows.length >= 1 ? this.setFocusedRow(this._data.Rows[rows[0]]) : this.setFocusedRow(null);
-    };
-    this.unSelect = function (rows) {
-        if (!cb.isArray(rows)) rows = [rows];
-        cb.each(rows, function (index) { this._data.Rows[index].isSelected = false; }, this);
-    };
-    this.onSelectAll = function () {
-        this._before("SelectAll", this);
-        this.selectAll();
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "SelectAll", this._data.Rows));
-        this._after("SelectAll", this);
-    };
-    this.onUnSelectAll = function () {
-        this._before("UnSelectAll", this);
-        this.unSelectAll();
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "UnSelectAll", this._data.Rows));
-        this._after("UnSelectAll", this);
-    };
-    this.selectAll = function () {
-        //if(this.isMultiMode)
-        cb.each(this._data.Rows, function (row) { row.isSelected = true; }, this);
-    };
-    this.unSelectAll = function () {
-        cb.each(this._data.Rows, function (row) { row.isSelected = false; }, this);
     };
     //#endregion
 

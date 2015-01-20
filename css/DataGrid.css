@@ -193,3 +193,6 @@
 	background:url(../images/sort_icons.png) no-repeat -16px 0;
 }
 
+.grid .cell{
+	line-height:27px;/*设置最小行高*/
+}
