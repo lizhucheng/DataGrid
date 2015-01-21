@@ -2,17 +2,23 @@
 	position:relative;
 	overflow:hidden;
 }
-/*必须给表头和固定区设置背景，否则其下面的内容会透明出来*/
+
 /*内容区行交互样式*/
-.grid{background-color:#fff;}/*grid必需设置默认背景色*/
-.grid  tbody *{background-color:inherit;}
-.grid  tbody  tr:hover{
+/*必需给cellBorder设置背景色，否则活动的列中的单元格在水平滚动时，会由于滚定列中的单元格无背景（默认透明）而可见*/
+.grid  tbody  tr,
+.grid  tbody  tr  .cellBorder{/*默认颜色*/
+	background-color:#fff;
+}
+.grid  tbody  tr:hover,
+.grid  tbody  tr:hover  .cellBorder{
 	background-color:#eaf2ff;
 }
-.grid  tbody  tr.selected{
+.grid  tbody  tr.selected,
+.grid  tbody  tr.selected  .cellBorder{
 	background-color:#0f0;
 }
-.grid  tbody  tr.focused{
+.grid  tbody  tr.focused,
+.grid  tbody  tr.focused  .cellBorder{
 	background-color:#0ff;/*焦点行的背景色应该和选中行相近，且较选中行浅*/
 }
 
