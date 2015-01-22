@@ -16,12 +16,12 @@ cb.model.Model3D = function (parent, name, data) {
     this._listeners = [];
     //this._data = data || { Rows: [], Columns: {} }; 基类中赋值,//存储自身的信息，readOnly，disabled等
     this._data.Mode = this._data.Mode || "Local";
-	/*Rows数据标识当前视图中展示的数据行；模型中有一个表示按序存储的行数据结构allRows，代表所有数据，这些数据不一定都已在本地。
-	Rows和allRows交互，从中获取数据，Rows保留allRows中行数据的引用，使修改同步；allRows内部和服务端交互，负责从服务端请求页数据和提交本地修改。
-	allRows提供分页配置管理。
+	/*Rows数据标识当前视图中展示的数据行；模型中有一个表示按序存储的行数据结构dataSource，代表所有数据，这些数据不一定都已在本地。
+	Rows和dataSource交互，从中获取数据，Rows保留dataSource中行数据的引用，使修改同步；dataSource内部和服务端交互，负责从服务端请求页数据和提交本地修改。
+	dataSource提供分页配置管理。
 	*/
-    this._data.Rows = this._data.Rows || []; //this._data.Rows = [{ ID: { readOnly: true, Value: 111 }, Name: 22, readOnly: true}]
-	this._data.allRows=this._data.allRows||this._data.Rows;
+    //this._data.Rows = this._data.Rows || []; //this._data.Rows = [{ ID: { readOnly: true, Value: 111 }, Name: 22, readOnly: true}]
+	this._data.dataSource=[];
 	
     this._data.Columns = this._data.Columns || {}; //this._data.Columns = { ID: { readOnly: true, disabled: true }, Name: {} };
 	
@@ -231,6 +231,7 @@ cb.model.Model3D = function (parent, name, data) {
         this.syncEditRowModel(rowIndex, cellName, propertyName, value); //需要优化一下，看放在哪里效率高
     };
 
+	//是否合并单元格控制
 	this.setMergeState=function(merge){
 		if(this.set('mergeState',!!merge)!==false){//属性变化时才通知视图更新，把和并信息的计算放到绑定器中处理
 			var mergeCells=null;
@@ -302,6 +303,7 @@ cb.model.Model3D = function (parent, name, data) {
 		//console.log('mergeCells:',JSON.stringify(mergeCells,null,4));
 		return count?mergeCells:null;
 	};
+	//单页排序设置
 	this.setSortFields=function(sortFields,noReflesh){//noReflesh仅内部使用
 		sortFields=cb.clone(sortFields);
 		if (!this._before("sort")) {//执行前动作被阻止时，使视图和model保持一致
@@ -310,13 +312,55 @@ cb.model.Model3D = function (parent, name, data) {
 			return;
 		}
 		if(this.set('sortFields',sortFields)!==false && !noReflesh && sortFields.length){//如果指定不刷新这不重排序
-			this._sort(sortFields);
+			this._sortPageRows();
+			//显示的数据集（包括排序信息）改变后，刷新界面显示
+			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "displayRows", this._data.Rows));
 			this._after("sort");
 		}
 		
 	};//应该使用副本数据，避免别处的修改印象model内部状态
 	this.getSortFields=function(){return this.get('sortFields');};
-	
+	this._sortPageRows=function(){
+		var rows = this._data.Rows,
+			fields=this.getSortFields();
+		
+		var model3d=this,
+			Model3D=cb.model.Model3D;
+			columns=this._data.Columns;
+		var fn=function(itemA, itemB){
+				var valA,valB;
+				for(var i=0,len=fields.length;i<len;i++){
+					var field=fields[i][0];//字段名
+					var col=columns[field];
+					if(!col)continue;
+					
+					//提取行数据中对应字段的值
+					valA=itemA[field]&&typeof itemA[field]=='object'?itemA[field].value:itemA[field];
+					valB=itemB[field]&&typeof itemB[field]=='object'?itemB[field].value:itemB[field];
+					
+					//可在列信息中指定排序规则，指定排序规则时可通过名称引用已有的排序方式，也可以通过比较器定义排序规则
+					var comparator=col.comparator;
+					//如果未指定comparator，或指定无效的类型数据（既不是字符串，也不是函数）
+					if(!comparator||(typeof comparator!=='string'&& Object.prototype.toString.call(comparator)=='[object Function]')){
+						comparator=null;
+					}
+					//如果指定了预定义的比较器名称，则使用名称对应的比较器
+					comparator=typeof comparator==='string'?Model3D.comparators[comparator]:comparator;
+					//如果还没有确定比较器，则使用类型默认的排序方式,如果类型没有默认的排序方式
+					comparator=comparator||Model3D.comparators[col.type||'String'];//未指定字段类型时，默认为字符串类型
+
+					var direction=fields[i][1];
+					//如果没有比较器，这保持原有顺序
+					var result=comparator?(direction===1?comparator(valA, valB):0-comparator(valA, valB)):0;//direction:1 asc,-1 des;					
+					
+					if(result)return result;
+				}
+				return 0;
+			};
+		
+		rows.sort(fn);
+        this._data.Rows = rows;
+	};	
     //#region getState
     this.setRowState = function (rowIndex, propertyName, value) {
         this.setState(rowIndex, null, propertyName, value);
@@ -434,62 +478,81 @@ cb.model.Model3D = function (parent, name, data) {
             if (row[index] == null) row[index] = columns[index]["defaultValue"];
         }
     }
-
-    this.setQueryScheme = function (data) {
-        if (!data || data.length == null) {
-            return;
-        }
-        this._data.QueryScheme = {};
-        for (var i = 0; i < data.length; i++) {
-            this._data.QueryScheme[data[i].pk_queryscheme] = data[i];
-            if (data[i].isdefault.value) {
-                this.selectQueryScheme(data[i].pk_queryscheme);
-            }
-        }
-    };
-
-    this.selectQueryScheme = function (querySchemeID) {
-        if (!querySchemeID) {
-            return;
-        }
-        var args = {
-            querySchemeID: querySchemeID,
-            pageSize: this._data.PageInfo.pageSize
-        }
-        this.fireEvent("onQuerySchemeChanged", args);
-        var statusData = this.getStatusData();
-        statusData["QueryScheme"] = this._data.QueryScheme[querySchemeID].name;
-        this.setStatusData();
-    };
-
-    this.getQueryScheme = function () {
-        return this._data.QueryScheme;
-    };
-
-    this.setStatusData = function () {
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "StatusData", this.getStatusData()));
-    };
-
-    this.getStatusData = function () {
-        if (!this._data.StatusData) {
-            this._data.StatusData = {};
-        }
-        return this._data.StatusData;
-    };
-
+	/*
+	模型中设置数据源，数据源有来源属性（标识是否来着远程服务器还是来着本地）；
+	分页是数据展示的一种方式（可以有多种分页，例如分页数据之间可以有重叠）。
+	*/
+	//分页处理
+	this._pagination=this._data.pagination;//属性实例化后就不可变
+	if(this._pagination){
+		//分页时默认显示第一页且每页显示50条记录
+		var pageInfo=this._data.pageInfo||{};
+		pageInfo.pageIndex=pageInfo.pageIndex||0;
+		pageInfo.pageSize=pageInfo.pageSize||50;
+		this._data.pageInfo=pageInfo;
+	}
     this.setPageSize = function (pageSize) {
         if (pageSize == null) {
             return;
         }
         this._data.PageInfo.pageSize = pageSize;
-        this._data.SupportPagination = true;
-        cb.cache.set("model3d", this);
     };
-
+	
     this.getPageSize = function () {
+		if(!this._pagination)return;
         return this._data.PageInfo.pageSize;
     };
+	this.gotoPage=function(index){
+		if(!this._pagination)return;
+		if(index<0||index>this._data.pageInfo.pageCount)
+	};
+	this.showNextPage=function(){};
+	this.showPreviousPage=function(){};
+	this.showFirstPage=function(){};
+	this.showLastPage=function(){};
+	
+	//设置分页查询代理，设置后，本地的数据清空
+	this.setPageServer=function(pageSever){
+		if(!this._isRemote)return;
+		this._data.pageSever=pageSever;
+		this._data.dataSource=[];
+		this._refleshDisplayRows();
+	};
 
+	//分页请求返回后回调
+	function pageServerCallBack(data){
+
+	}
+	//设置数据源，同时更新当前页数据
+	this.setDataSource=function(ds){
+		if(this._isRemote())return;//远程数据源不支持直接修改datasource，可以修改查询代理，间接修改datasource
+		
+		this._data.dataSource=ds||[];
+		this._refleshDisplayRows();
+	};
+	
+	//更新显示的数据行
+	this._refleshDisplayRows=function(){
+		var rows=[];
+		var ds=this._dataSource;
+		if(this._pagination){
+			var pageIndex=this._data.pageInfo.pageIndex,
+				pageSize=this._data.pageInfo.pageSize,
+				i=pageSize*pageIndex,
+				end=Math.min(pageSize*(pageIndex+1),ds.length);
+			for(;i<end;i++){
+				rows.push(ds[i]);
+			}
+			//根据过滤，排序处理数据
+			
+		}else{
+		
+		}
+	};
+	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
+	this._isRemote=function(){
+		return this._mode=='remote';
+	};
     this.setPageInfo = function (data, innerCall) {
         if (!data) {
             return;
@@ -641,7 +704,7 @@ cb.model.Model3D = function (parent, name, data) {
 	//支持多页选中
 	this.getSelectedRows = function () {
         var selectedRows = [];
-		var rows=this._data.allRows;
+		var rows=this._data.dataSource;
         for (var i = 0, length = rows.length; i < length; i++) {
             if (rows[i].isSelected) {
                 selectedRows.push(rows[i]);
@@ -774,64 +837,8 @@ cb.model.Model3D = function (parent, name, data) {
         this._after("removeAll");
     };
 
-    this._sort = function (fields) {
-        
-        var rows = [];
-        var cache = this._data.Cache;
-        if (cache) {
-            var pageSize = this._data.PageInfo.pageSize;
-            var pageIndex = this._data.PageInfo.pageIndex;
-            var start = pageIndex * pageSize - pageSize;
-            var end = pageIndex * pageSize;
-            for (var i = start; i < end; i++) {
-                if (cache[i]) {
-                    rows.push(cache[i]);
-                }
-            }
-        }
-        else {
-            rows = this._data.Rows;
-        }
-		var model3d=this,
-			Model3D=cb.model.Model3D;
-			columns=this._data.Columns;
-		var fn=function(itemA, itemB){
-				var valA,valB;
-				for(var i=0,len=fields.length;i<len;i++){
-					var field=fields[i][0];//字段名
-					var col=columns[field];
-					if(!col)continue;
-					
-					//提取行数据中对应字段的值
-					valA=itemA[field]&&typeof itemA[field]=='object'?itemA[field].value:itemA[field];
-					valB=itemB[field]&&typeof itemB[field]=='object'?itemB[field].value:itemB[field];
-					
-					//可在列信息中指定排序规则，指定排序规则时可通过名称引用已有的排序方式，也可以通过比较器定义排序规则
-					var comparator=col.comparator;
-					//如果未指定comparator，或指定无效的类型数据（既不是字符串，也不是函数）
-					if(!comparator||(typeof comparator!=='string'&& Object.prototype.toString.call(comparator)=='[object Function]')){
-						comparator=null;
-					}
-					//如果指定了预定义的比较器名称，则使用名称对应的比较器
-					comparator=typeof comparator==='string'?Model3D.comparators[comparator]:comparator;
-					//如果还没有确定比较器，则使用类型默认的排序方式,如果类型没有默认的排序方式
-					comparator=comparator||Model3D.comparators[col.type||'String'];//未指定字段类型时，默认为字符串类型
 
-					var direction=fields[i][1];
-					//如果没有比较器，这保持原有顺序
-					var result=comparator?(direction===1?comparator(valA, valB):0-comparator(valA, valB)):0;//direction:1 asc,-1 des;					
-					
-					if(result)return result;
-				}
-				return 0;
-			};
-		
-		rows.sort(fn);
-        this._data.Rows = rows;
-		//显示的数据集（包括排序信息）改变后，刷新界面显示
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "displayRows", this._data.Rows));
-    };
-	
+
     this.setDirty = function (rowIndex, value) {
         //this.set(rowIndex, null, "IsDirty", value);
     };
