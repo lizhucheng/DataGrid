@@ -161,8 +161,14 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		var model = this.getModel();
 		model.setFocusedRow(index);
 	};
-	
 	//
+	this._set_pageInfo:function(control,pageInfo){
+		//更新视图
+		if(control.pager){
+			control.pager.setPageInfo(pageInfo);
+		}
+	},
+	
 	this._onCellChange = function (rowIndex, cellName, cellValue) {
         var model = this.getModel();
         if (!model) return;
@@ -274,6 +280,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
             control.on("onQuerySchemeChanged", this._onQuerySchemeChanged, this);
         }
         model.addListener(this);
+		//
+		if(model._pagination&& model.pager){
+			
+		}
     };
 };
 cb.binding.DataGridBinding.prototype = new cb.binding.BaseBinding();

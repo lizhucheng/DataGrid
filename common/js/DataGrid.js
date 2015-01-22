@@ -882,6 +882,7 @@ DataGrid.prototype={
 		return this.getSelectedRows().length===this._getRows().length;
 	},
 	
+	
 	___end:''
 }
 

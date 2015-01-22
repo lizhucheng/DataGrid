@@ -25,6 +25,7 @@ var options={
 			pageSize:50,
 			pageIndex:0
 		},
+		pagination:true,//是否分页展示\\初始化后不能再修改
 		//所有列的定义(有序)
 		Columns:{
 			'title':{

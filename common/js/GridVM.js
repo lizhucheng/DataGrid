@@ -4,13 +4,15 @@
 // UPDATED = 1;//更新
 // NEW = 2;//新增
 // DELETED = 3;//删除
+*/
 cb.model.DataState = {
     Add: 2,
     Delete: 3,
     Update: 1,
-    Unchanged: 0
+    Unchanged: 0,
+	Missing:-1//数据不在本地
 };
-*/
+
 cb.model.Model3D = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
     this._listeners = [];
@@ -312,7 +314,7 @@ cb.model.Model3D = function (parent, name, data) {
 			return;
 		}
 		if(this.set('sortFields',sortFields)!==false && !noReflesh && sortFields.length){//如果指定不刷新这不重排序
-			this._sortPageRows();
+			this._data.Rows = this._sort(this._data.Rows);
 			//显示的数据集（包括排序信息）改变后，刷新界面显示
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "displayRows", this._data.Rows));
 			this._after("sort");
@@ -320,9 +322,9 @@ cb.model.Model3D = function (parent, name, data) {
 		
 	};//应该使用副本数据，避免别处的修改印象model内部状态
 	this.getSortFields=function(){return this.get('sortFields');};
-	this._sortPageRows=function(){
-		var rows = this._data.Rows,
-			fields=this.getSortFields();
+	//根据模型设置的排序规则，对数据行排序，返回排序后的行对象数组
+	this._sort=function(rows){
+		var fields=this.getSortFields();
 		
 		var model3d=this,
 			Model3D=cb.model.Model3D;
@@ -359,7 +361,7 @@ cb.model.Model3D = function (parent, name, data) {
 			};
 		
 		rows.sort(fn);
-        this._data.Rows = rows;
+		return rows;
 	};	
     //#region getState
     this.setRowState = function (rowIndex, propertyName, value) {
@@ -477,12 +479,21 @@ cb.model.Model3D = function (parent, name, data) {
             //row[index] = row[index] || columns[index]["defaultValue"];
             if (row[index] == null) row[index] = columns[index]["defaultValue"];
         }
-    }
+    };
 	/*
-	模型中设置数据源，数据源有来源属性（标识是否来着远程服务器还是来着本地）；
-	分页是数据展示的一种方式（可以有多种分页，例如分页数据之间可以有重叠）。
+	模型中设置数据源，数据源有来源属性（标识数据直接来自远程服务器还是来自本地）；
+	分页展示的定义：视图中显示的数据只是数据源的特定部分时，确定的展示方式属于分页展示（分页的具体方式可根据需要定制，例如支持普通的分页和滚动时分页，滚动时
+	分页为了是视图有缓冲带，会要求分页数据之间有部分重叠）
+	分页是数据展示的一种方式，独立与数据来源。
 	*/
 	//分页处理
+	//初始化行数据状态
+	this._rowsDataState=new Array(this._dataSource.length);//记录数据行的状态
+	
+	for(var i=0;i<this._dataSource.length;i++){
+		this._rowsDataState[i]=this._dataSource[i]?cb.model.DataState.Unchanged:cb.model.DataState.Missing;
+	}
+	
 	this._pagination=this._data.pagination;//属性实例化后就不可变
 	if(this._pagination){
 		//分页时默认显示第一页且每页显示50条记录
@@ -491,134 +502,137 @@ cb.model.Model3D = function (parent, name, data) {
 		pageInfo.pageSize=pageInfo.pageSize||50;
 		this._data.pageInfo=pageInfo;
 	}
-    this.setPageSize = function (pageSize) {
+	
+    
+	//rows为对应的页数据，根据model的设置（页过滤规则，排序规则），得到页面展示的数据
+	this._setPageRows=function(rows){
+		this._data.Rows=this._sort(this._filter());
+		//刷新视图
+		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "displayRows", this._data.Rows));
+	};
+	//根据定义的页数据过滤器，过滤行数据
+	this._filter=function(rows){
+		return rows;
+	};
+	//尝试获取当前页数据，如果当前页数据不全,返回null
+	this._getCurrentPageRows=function(){
+		var rows=[];
+		var missing=cb.model.DataState.Missing;
+		var pageIndex=this._data.pageInfo.pageIndex,
+			pageSize=this._data.pageInfo.pageSize,
+			i=pageSize*pageIndex,
+			end=Math.min(pageSize*(pageIndex+1),ds.length);
+		for(;i<end;i++){
+			if(this._rowsDataState[i]!==missing){
+				rows.push(ds[i]);
+			}else{
+				return null;
+			}
+		}
+		return rows;
+	};
+	this.setPageSize = function (pageSize) {
+		if(!this._pagination)throw('custom exception:unsupported!');
         if (pageSize == null) {
             return;
         }
-        this._data.PageInfo.pageSize = pageSize;
+        this._data.pageInfo.pageSize = pageSize;
+		this._data.pageInfo.pageIndex=0;
+		this._refreshDisplayRows();
     };
-	
     this.getPageSize = function () {
-		if(!this._pagination)return;
+		if(!this._pagination)throw('custom exception:unsupported!');
         return this._data.PageInfo.pageSize;
     };
-	this.gotoPage=function(index){
-		if(!this._pagination)return;
-		if(index<0||index>this._data.pageInfo.pageCount)
+	this.setPageIndex=this.gotoPage=function(index){
+		if(!this._pagination)throw('custom exception:unsupported!');
+		var pageCount=this.getPageCount();
+		if(index>=0&&index<pageCount){
+			this._data.pageInfo.pageIndex=index;
+			this._refreshDisplayRows();
+		}
 	};
-	this.showNextPage=function(){};
-	this.showPreviousPage=function(){};
-	this.showFirstPage=function(){};
-	this.showLastPage=function(){};
+	
+	this.getPageIndex=function(){
+		if(!this._pagination)throw('custom exception:unsupported!');
+	};
+	this.getPageCount=function(){
+		if(!this._pagination)throw('custom exception:unsupported!');
+		return this._data.pageInfo.pageCount;
+	};
+	this.showNextPage=function(){
+		var index=this.getPageIndex()+1;
+		var pageCount=this.getPageCount();
+		if(index<pageCount){
+			this.setPageIndex(index);
+		}
+	};
+	
+	this.showPreviousPage=function(){
+		var index=this.getPageIndex()+1;
+		var pageCount=this.getPageCount();
+		if(index>=0){
+			this.setPageIndex(index);
+		}
+	};
+	this.showFirstPage=function(){
+		this.setPageIndex(0);
+	};
+	this.showLastPage=function(){
+		this.setPageIndex(this.getPageCount());
+	};
 	
 	//设置分页查询代理，设置后，本地的数据清空
 	this.setPageServer=function(pageSever){
-		if(!this._isRemote)return;
+		if(!this._isRemote)throw('custom exception:unsupported!');
 		this._data.pageSever=pageSever;
 		this._data.dataSource=[];
-		this._refleshDisplayRows();
+		this._refreshDisplayRows();
 	};
-
-	//分页请求返回后回调
-	function pageServerCallBack(data){
-
-	}
+	this._getPageServer=function(){
+		if(!this._isRemote()||this._data.pageSever)throw('custom exception:no pageServer');
+		return this._data.pageSever;
+	};
+	//分页请求返回后回调,context指定为this
+	var pageServerCallBack=$.proxy(function(data){
+		if(data.success){
+			var data=data.success;
+			this._setPageRows(data.Rows);
+			this._data.pageInfo.totalCount;
+			//this._data.pageInfo.pageCount=Math.ceil(this._data.pageInfo.totalCount/this.getPageSize());
+			//通知分页条更新
+			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
+		}else{
+			alert(data.fail.message);
+		}
+	},this);
 	//设置数据源，同时更新当前页数据
 	this.setDataSource=function(ds){
 		if(this._isRemote())return;//远程数据源不支持直接修改datasource，可以修改查询代理，间接修改datasource
 		
 		this._data.dataSource=ds||[];
-		this._refleshDisplayRows();
+		this._refreshDisplayRows();
 	};
 	
 	//更新显示的数据行
-	this._refleshDisplayRows=function(){
-		var rows=[];
-		var ds=this._dataSource;
-		if(this._pagination){
-			var pageIndex=this._data.pageInfo.pageIndex,
-				pageSize=this._data.pageInfo.pageSize,
-				i=pageSize*pageIndex,
-				end=Math.min(pageSize*(pageIndex+1),ds.length);
-			for(;i<end;i++){
-				rows.push(ds[i]);
-			}
-			//根据过滤，排序处理数据
+	this._refreshDisplayRows=function(){
+		var pageRows=this._getCurrentPageRows();
+		if(pageRows){
+			this._setPageRows(pageRows);
+		}else{//数据不全在本地
+			var pageServer=this._getPageServer();
+			var data={
+				pageIndex:this.getPageIndex(),
+				pageSize:this.getPageSize()
+			};
+			pageServer(data,pageServerCallBack);
 			
-		}else{
-		
 		}
 	};
 	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
 	this._isRemote=function(){
 		return this._mode=='remote';
 	};
-    this.setPageInfo = function (data, innerCall) {
-        if (!data) {
-            return;
-        }
-        if (data.pageSize != null) {
-            this._data.PageInfo.pageSize = data.pageSize;
-        }
-        if (data.pageIndex != null) {
-            this._data.PageInfo.pageIndex = data.pageIndex;
-        }
-        if (data.pageCount != null) {
-            this._data.PageInfo.pageCount = data.pageCount;
-        }
-        if (data.totalCount != null) {
-            this._data.PageInfo.totalCount = data.totalCount;
-        }
-        if (innerCall === true) {
-            var statusData = this.getStatusData();
-            if (this._data.PageInfo.pageSize == 0) {
-                statusData["PageInfo"] = "显示全部 " + this._data.PageInfo.totalCount + " 行";
-            }
-            else {
-                statusData["PageInfo"] = "当前页大小 " + this._data.PageInfo.pageSize
-                                            + " 显示页 " + this._data.PageInfo.pageIndex
-                                            + " / " + this._data.PageInfo.pageCount
-                                            + " 全部 " + this._data.PageInfo.totalCount
-                                            + " 行";
-            }
-            this.setStatusData();
-            return;
-        }
-        this.onChangePage(this._data.PageInfo.pageSize, this._data.PageInfo.pageIndex);
-    }
-
-    this.getPageInfo = function () {
-        return this._data.PageInfo;
-    }
-
-    this.setPageRows = function (data, cacheNeed) {
-        if (!this._before("setPageRows", data))
-            return;
-        this.setPageInfo(data, true);
-        this._data.Rows = [];
-        var rows = data.currentPageData || [];
-        for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
-            if (!row) continue;
-            this._$setId(row);
-            this._processRow(row);
-            this._data.Rows.push(row);
-        }
-        data.currentPageData = this._data.Rows;
-
-        if (cacheNeed || cacheNeed == null) {
-            this._data.Cache = this._data.Cache || {};
-            var cache = this._data.Cache;
-            var start = data.pageIndex * data.pageSize - data.pageSize;
-            var rows = data.currentPageData || [];
-
-            for (var i = 0; i < rows.length; i++) {
-                cache[start + i] = rows[i];
-            }
-        }
-        this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "PageRows", data));
-        this._after("setPageRows", data);
-    };
 
     this.commitRows = function (rows) {
         if (!this._before("commitRows", rows))
