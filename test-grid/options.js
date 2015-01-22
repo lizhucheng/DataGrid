@@ -15,6 +15,16 @@ var options={
 		fieldNames:['duration','effortDriven','start','finish','percentComplete','title'],//说明字段排序
 		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
 		mergeState:false,
+		/*remote /local，表示数据源直接来源，本地提供行数据还是远程提供行数据，如果是直接远程数据源，
+		则必需在pageQuery指定分页查询代理（不提供远程不分页处理,远程不分页数据源，可等数据源到达本地后，把本地的数据作为grid的直接数据源）
+		*/
+		mode:'remote',
+		//第一个元素表示用于请求数据的方法，第二个元素表示查询前用于收集查询参数的方法，每次请求
+		pageSever:serverQuery,
+		pageInfo:{
+			pageSize:50,
+			pageIndex:0
+		},
 		//所有列的定义(有序)
 		Columns:{
 			'title':{
@@ -59,10 +69,31 @@ var options={
 		//cellStyler类似 class名带前缀"cellStyler-"
 		rowStyler:function(rowNo,record){},//rowNo为行序号，record为行数据记录（json对象）
 		cellStyler:function(rowNo,colNo){},
-		Rows:getTestData(10)
+		//Rows:getTestData(10)
 	};
 
-
+//模拟的服务端
+var pageQuery=function(pageInfo,callback){
+	var pageSize=pageInfo.pageSize,
+		pageIndex=pageInfo.pageIndex;
+	var total=1125;
+	var datasource=getTestData(total);
+	
+	var rows=[];
+	var end=Math.min(total,(pageIndex+1)*pageSize);
+	for(var i=pageSize*pageIndex;i<end;i++){
+		rows.push(datasource[i]);
+	}
+	data.rows=rows;
+	data.success=true;
+	data.total=total;
+	data.pageSize=pageSize;
+	data.pageIndex=pageIndex;
+	//处理回调
+	if(callback){
+		callback(data);
+	}
+};
 
 function getTestData(count){
 	var data=[];
