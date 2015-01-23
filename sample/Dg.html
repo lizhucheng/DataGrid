@@ -30,6 +30,10 @@
 			<option value="0">不合并显示</option>
 			<option value="1">合并显示</option>
 		</select>
+		<select id="autoWrap">
+			<option value="0">不自动换行</option>
+			<option value="1">自动换行</option>
+		</select>
 	</div>
     <script src="../jquery/jquery-1.11.1.js" type="text/javascript"></script>
 	<script src="../jquery/jquery.event.drag-2.2.js"></script>
@@ -71,6 +75,14 @@
 		}
 	});
 
+	$('#autoWrap').on('change',function(evt){
+		var value=+$(this).val();
+		switch(value){
+			case 0:model.setAutoWrap(false);break;
+			case 1:model.setAutoWrap(true);break;
+			default:break;
+		}
+	});
 	</script>
 </body>
 </html>

@@ -227,7 +227,18 @@ cb.model.Model3D = function (parent, name, data) {
 
         this.syncEditRowModel(rowIndex, cellName, propertyName, value); //需要优化一下，看放在哪里效率高
     };
-
+	
+	//自动换行
+	this.setAutoWrap=function(autoWrap){
+		if(this.set('autoWrap',!!autoWrap)!==false){//属性变化时才通知视图更新，把和并信息的计算放到绑定器中处理
+			var args = new cb.model.PropertyChangeArgs(this._name, "autoWrap",!!autoWrap);
+			this.PropertyChange(args);	
+		}
+	};
+	//设置固定列边界
+	this.setFrozenField=function(field){
+		var col=this.get(null,field);
+	};
 	//是否合并单元格控制
 	this.setMergeState=function(merge){
 		if(this.set('mergeState',!!merge)!==false){//属性变化时才通知视图更新，把和并信息的计算放到绑定器中处理
@@ -356,7 +367,7 @@ cb.model.Model3D = function (parent, name, data) {
 		
 		rows.sort(fn);
 		return rows;
-	};	
+	};
     //#region getState
     this.setRowState = function (rowIndex, propertyName, value) {
         this.setState(rowIndex, null, propertyName, value);
@@ -466,7 +477,7 @@ cb.model.Model3D = function (parent, name, data) {
         this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "Rows", this._data.Rows));
         this._after("setRows", rows);
     };
-
+	
     this._processRow = function (row) {
         var columns = this._data.Columns;
         for (var index in columns) {
@@ -678,8 +689,8 @@ cb.model.Model3D = function (parent, name, data) {
 			this.setPageIndex(index);
 		}
 	};
+	/////
 	
-////
     this.commitRows = function (rows) {
         if (!this._before("commitRows", rows))
             return;
