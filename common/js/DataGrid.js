@@ -451,13 +451,6 @@ DataGrid.prototype={
 		}
 		$('.viewBody').show();
 	},
-	//返回当前显示行的可合并信息
-	/*只统计rowspan>=2的单元格
-	数据结构：{
-		field1:[{index:0,rowspan:2},{index:2,rowspan:3}],
-		field2:[{index:2,rowspan:2}]
-	}
-	*/
 	_getMergeCells:function(data){
 		var cols=this.cols;
 		var count=0;//统计一共有多少可合并的单元格
