@@ -1,16 +1,10 @@
 /// <reference path="Cube.js" />
-/*
-// UNCHANGED = 0;//不变化
-// UPDATED = 1;//更新
-// NEW = 2;//新增
-// DELETED = 3;//删除
-*/
 cb.model.DataState = {
     Add: 2,
     Delete: 3,
     Update: 1,
     Unchanged: 0,
-	Missing:-1//数据不在本地
+	Missing:undefined//数据不在本地,
 };
 
 cb.model.Model3D = function (parent, name, data) {
@@ -326,7 +320,7 @@ cb.model.Model3D = function (parent, name, data) {
 	//根据模型设置的排序规则，对数据行排序，返回排序后的行对象数组
 	this._sort=function(rows){
 		var fields=this.getSortFields();
-		
+		if(!fields.length)return rows;
 		var model3d=this,
 			Model3D=cb.model.Model3D;
 			columns=this._data.Columns;
@@ -358,7 +352,6 @@ cb.model.Model3D = function (parent, name, data) {
 					
 					if(result)return result;
 				}
-				return 0;
 			};
 		
 		rows.sort(fn);
@@ -538,8 +531,11 @@ cb.model.Model3D = function (parent, name, data) {
 		if(data.success){
 			var data=data.success;
 			this._setPageRows(data.Rows);
-			this._data.pageInfo.totalCount;
-			//this._data.pageInfo.pageCount=Math.ceil(this._data.pageInfo.totalCount/this.getPageSize());
+			//请求数据是肯定指定了pageSize和pageIndex,所以无须再修改
+			//this._data.pageInfo.pageSize=data.pageSize;
+			//this._data.pageInfo.pageIndex=data.pageIndex;
+			this._data.pageInfo.totalCount=data.totalCount;
+			
 			//通知分页条更新
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
 		}else{
@@ -577,7 +573,20 @@ cb.model.Model3D = function (parent, name, data) {
 			data.pageSize=data.pageSize||this.getPageSize();
 			data.pageIndex=data.pageIndex||this.getPageIndex();
 			var pageServer=this._getPageServer();
-			pageServer(data,pageServerCallBack);
+			//pageServer(data,pageServerCallBack);
+			
+			pageServer(data,$.proxy(function(response){
+				if(response.fail){
+					alert(response.fail.message);
+					return;
+				}
+				data=response.success;
+				//更新datasource长度和内容
+				this._dataSource=new Array(data.totalCount);
+				this._rowsDataState=new Array(data.totalCount);
+				this._updateDataSource(data.Rows,data.pageIndex,data.pageSize);
+				pageServerCallBack(response);
+			},this));
 		}else{//data为datasource结构
 			data=data||[];
 			this.setDataSource(data);
@@ -587,8 +596,11 @@ cb.model.Model3D = function (parent, name, data) {
 	this._updateDataSource=function(rows,pageIndex,pageSize){
 		//暂时简单处理，把数据放到指定位置，不考虑客户端的已有修改
 		var ds=this._getDataSource();
+		var rowsDataState=this._rowsDataState;
+		var dataState=cb.model.Unchanged;
 		for(var i=pageIndex*pageSize,count=Math.min(pageSize,rows.length);count--;i++){
 			ds[i]=rows[i];
+			rowsDataState[i]=dataState;
 		}
 	};
 	var countAdded=0;//记录添加的行的数量
@@ -599,13 +611,13 @@ cb.model.Model3D = function (parent, name, data) {
 	this._getCurrentPageRows=function(){
 		var rows=[];
 		var ds=this._getDataSource();
-		var missing=cb.model.DataState.Missing;
+		var dataState=cb.model.DataState.Missing;
 		var pageIndex=this._data.pageInfo.pageIndex,
 			pageSize=this._data.pageInfo.pageSize,
 			i=pageSize*pageIndex,
 			end=Math.min(pageSize*(pageIndex+1),ds.length);
 		for(;i<end;i++){
-			if(this._rowsDataState[i]!==missing){
+			if(this._rowsDataState[i]!=dataState){
 				rows.push(ds[i]);
 			}else{
 				return null;
@@ -620,7 +632,7 @@ cb.model.Model3D = function (parent, name, data) {
         }
         this._data.pageInfo.pageSize = pageSize;
 		this._data.pageInfo.pageIndex=0;
-		if(_inner){this._refreshDisplayRows();}
+		if(!_inner){this._refreshDisplayRows();}
     };
     this.getPageSize = function () {
 		if(!this._pagination)throw('custom exception:unsupported!');
@@ -631,7 +643,7 @@ cb.model.Model3D = function (parent, name, data) {
 		var pageCount=this.getPageCount();
 		if(index>=0&&index<pageCount){
 			this._data.pageInfo.pageIndex=index;
-			if(_inner){this._refreshDisplayRows();}
+			if(!_inner){this._refreshDisplayRows();}
 		}
 	};
 	
@@ -641,7 +653,7 @@ cb.model.Model3D = function (parent, name, data) {
 	};
 	this.getPageCount=function(){
 		if(!this._pagination)throw('custom exception:unsupported!');
-		return this._data.pageInfo.pageCount;
+		return Math.ceil(this._data.pageInfo.totalCount/this._data.pageInfo.pageSize);
 	};
 	this.showNextPage=function(){
 		var index=this.getPageIndex()+1;
@@ -652,8 +664,7 @@ cb.model.Model3D = function (parent, name, data) {
 	};
 	
 	this.showPreviousPage=function(){
-		var index=this.getPageIndex()+1;
-		var pageCount=this.getPageCount();
+		var index=this.getPageIndex()-1;
 		if(index>=0){
 			this.setPageIndex(index);
 		}
@@ -662,7 +673,10 @@ cb.model.Model3D = function (parent, name, data) {
 		this.setPageIndex(0);
 	};
 	this.showLastPage=function(){
-		this.setPageIndex(this.getPageCount());
+		var index=this.getPageCount()-1;
+		if(index>=0){
+			this.setPageIndex(index);
+		}
 	};
 	
 ////
