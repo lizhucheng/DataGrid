@@ -18,12 +18,14 @@
 		</div>
 	</div>
 	<div id="test">
-		<select id="pager">
-			<option value="0">第一页</option>
-			<option value="1">下一页</option>
-			<option value="-1">上一页</option>
-			<option value="10">最后一页</option>
-		</select>
+		<div id="pager">
+			<input type="button" value="first" class="first" />
+			<input type="button" value="next" class="next" />
+			<input type="button" value="previous" class="previous" />
+			<input type="button" value="last" class="last" /><br/>
+			<label>pagesize<input class="pageSize" type="text" /><label>
+			<label>goto<input class="goto" type="text" /><label>
+		</div>
 		<select id="mergeState">
 			<option value="0">不合并显示</option>
 			<option value="1">合并显示</option>
@@ -45,15 +47,20 @@
 		var model=viewBinding.getModel('product');
 	</script>
 	<script>
-	$('#pager').on('change',function(evt){
+
+	$('#pager .first').on('click',function(){model.showFirstPage()});
+	$('#pager .next').on('click',function(){model.showNextPage()});
+	$('#pager .previous').on('click',function(){model.showPreviousPage()});
+	$('#pager .last').on('click',function(){model.showLastPage()});
+	$('#pager .pageSize').on('change',function(evt){
 		var value=+$(this).val();
-		switch(value){
-			case 0:model.showFirstPage();break;
-			case 1:model.showNextPage();break;
-			case -1:model.showPreviousPage();break;
-			case 10:model.showLastPage();break;
-			default:break;
-		}
+		if(value!==value)return;
+		model.setPageSize(value);
+	});
+	$('#pager .goto').on('change',function(evt){
+		var value=+$(this).val();
+		if(value!==value)return;
+		model.setPageIndex(value-1);
 	});
 	$('#mergeState').on('change',function(evt){
 		var value=+$(this).val();
@@ -63,6 +70,7 @@
 			default:break;
 		}
 	});
+
 	</script>
 </body>
 </html>

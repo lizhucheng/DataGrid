@@ -396,7 +396,7 @@ DataGrid.prototype={
 		}
 		
 		//点击行时，行获得焦点
-		this.$el.on('click','tr',function(evt){
+		this.$el.on('click','.viewBody tr',function(evt){
 				var row=$(this).closest('tr')[0],
 					rows=dg._getRows(),
 					index=rows.indexOf(row);

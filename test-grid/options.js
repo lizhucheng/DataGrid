@@ -12,7 +12,7 @@ var options={
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		multiSort:true,		//是否支持多列排序，默认true
-		fieldNames:['duration','effortDriven','start','finish','percentComplete','title'],//说明字段排序
+		fieldNames:['duration','effortDriven','start','finish','percentComplete','title','number'],//说明字段排序
 		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
 		mergeState:false,
 		/*remote /local，表示数据源直接来源，本地提供行数据还是远程提供行数据，如果是直接远程数据源，
@@ -28,6 +28,7 @@ var options={
 		pagination:true,//是否分页展示\\初始化后不能再修改
 		//所有列的定义(有序)
 		Columns:{
+			
 			'title':{
 				type:'String',
 				title:'title',	//表头显示的文本
@@ -45,6 +46,10 @@ var options={
 				type:'Number',
 				sortable:false,
 				title:'duration'
+			},
+			'number':{
+				type:'Number',
+				title:'number'
 			},
 			'percentComplete':{
 				type:'Number',
@@ -108,6 +113,7 @@ function getTestData(count){
 		start: "01/01/2009",
 		finish: "01/05/2009",
 		effortDriven: (i % 5 == 0),
+		number:i+1,
 		
 		title2: "Task " + i,
 		duration2: "5 days",

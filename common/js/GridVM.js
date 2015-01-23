@@ -702,7 +702,7 @@ cb.model.Model3D = function (parent, name, data) {
     //焦点管理
 	this.setFocusedRow = function (index) {
 		var rows=this._data.Rows;
-		if(index<0&& index>=rows.length){
+		if(index<0||index>=rows.length){
 			this._focusedRowIndex = -1;
             this.getEditRowModel().clear();
             return;
