@@ -23,8 +23,8 @@ cb.model.Model3D = function (parent, name, data) {
 	dataSource提供分页配置管理。
 	*/
     //this._data.Rows = this._data.Rows || []; //this._data.Rows = [{ ID: { readOnly: true, Value: 111 }, Name: 22, readOnly: true}]
-	this._data.dataSource=[];
-	
+	this._dataSource=[];
+	this._data.Rows=[];
     this._data.Columns = this._data.Columns || {}; //this._data.Columns = { ID: { readOnly: true, disabled: true }, Name: {} };
 	
 	this._data.sortFields=this._data.sortFields||[];//排序信息
@@ -38,8 +38,9 @@ cb.model.Model3D = function (parent, name, data) {
 
     this._editRowModel = null;
 
-    this._data.PageInfo = this._data.PageInfo || { pageSize: 0, pageIndex: 1, pageCount: 1, totalCount: 0 };
-
+    this._data.pageInfo = this._data.PageInfo||{};
+	delete this._data.PageInfo;
+	
     this.get = function (rowIndex, cellName, propertyName) {
         if (arguments.length == 1) {
             //增加判断，如果只传递了1个参数，则按propertyName处理
@@ -480,6 +481,10 @@ cb.model.Model3D = function (parent, name, data) {
             if (row[index] == null) row[index] = columns[index]["defaultValue"];
         }
     };
+	//根据定义的页数据过滤器，过滤行数据
+	this._filter=function(rows){
+		return rows;
+	};
 	/*
 	模型中设置数据源，数据源有来源属性（标识数据直接来自远程服务器还是来自本地）；
 	分页展示的定义：视图中显示的数据只是数据源的特定部分时，确定的展示方式属于分页展示（分页的具体方式可根据需要定制，例如支持普通的分页和滚动时分页，滚动时
@@ -488,10 +493,65 @@ cb.model.Model3D = function (parent, name, data) {
 	*/
 	//分页处理
 	//初始化行数据状态
-	this._rowsDataState=new Array(this._dataSource.length);//记录数据行的状态
+	this._getDataSource=function(){return this._dataSource;};
+	//设置数据源，同时更新当前页数据
+	this.setDataSource=function(ds){
+		if(this._isRemote())return;//远程数据源不支持直接修改datasource，可以修改查询代理，间接修改datasource
+		
+		this._dataSource=ds||[];
+		this._refreshDisplayRows();
+	};
 	
-	for(var i=0;i<this._dataSource.length;i++){
-		this._rowsDataState[i]=this._dataSource[i]?cb.model.DataState.Unchanged:cb.model.DataState.Missing;
+	//更新显示的数据行
+	this._refreshDisplayRows=function(){
+		var pageRows=this._getCurrentPageRows();
+		if(pageRows){
+			this._setPageRows(pageRows);
+		}else{//数据不全在本地
+			var pageServer=this._getPageServer();
+			var data={
+				pageIndex:this.getPageIndex(),
+				pageSize:this.getPageSize()
+			};
+			pageServer(data,pageServerCallBack);
+			
+		}
+	};
+	
+	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
+	this._isRemote=function(){
+		return this._mode==='remote';
+	};
+	//设置分页查询代理，设置后，本地的数据清空
+	this.setPageServer=function(pageSever){
+		if(!this._isRemote)throw('custom exception:unsupported!');
+		this._data.pageSever=pageSever;
+		this._data.dataSource=[];
+		this._refreshDisplayRows();
+	};
+	this._getPageServer=function(){
+		if(!this._isRemote()||!this._data.pageServer)throw('custom exception:no pageServer');
+		return this._data.pageServer.query||this._data.pageServer;
+	};
+	//分页请求返回后回调,context指定为this
+	var pageServerCallBack=$.proxy(function(data){
+		if(data.success){
+			var data=data.success;
+			this._setPageRows(data.Rows);
+			this._data.pageInfo.totalCount;
+			//this._data.pageInfo.pageCount=Math.ceil(this._data.pageInfo.totalCount/this.getPageSize());
+			//通知分页条更新
+			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
+		}else{
+			alert(data.fail.message);
+		}
+	},this);
+	
+	var ds=this._getDataSource();
+	this._rowsDataState=new Array(ds.length);//记录数据行的状态
+	
+	for(var i=0;i<ds.length;i++){
+		this._rowsDataState[i]=ds[i]?cb.model.DataState.Unchanged:cb.model.DataState.Missing;
 	}
 	
 	this._pagination=this._data.pagination;//属性实例化后就不可变
@@ -502,21 +562,43 @@ cb.model.Model3D = function (parent, name, data) {
 		pageInfo.pageSize=pageInfo.pageSize||50;
 		this._data.pageInfo=pageInfo;
 	}
-	
-    
+    this._mode=this._data.mode||'local';
 	//rows为对应的页数据，根据model的设置（页过滤规则，排序规则），得到页面展示的数据
 	this._setPageRows=function(rows){
-		this._data.Rows=this._sort(this._filter());
+		this._data.Rows=this._sort(this._filter(rows));
 		//刷新视图
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "displayRows", this._data.Rows));
 	};
-	//根据定义的页数据过滤器，过滤行数据
-	this._filter=function(rows){
-		return rows;
+	//初始化ds
+	this.initDataSource=function(data){
+		if(this._isRemote()){
+			//data中包含pageSize和pageIndex信息
+			data=data||{};
+			data.pageSize=data.pageSize||this.getPageSize();
+			data.pageIndex=data.pageIndex||this.getPageIndex();
+			var pageServer=this._getPageServer();
+			pageServer(data,pageServerCallBack);
+		}else{//data为datasource结构
+			data=data||[];
+			this.setDataSource(data);
+		}
 	};
+	//数据库查询的数据到后更新数据源
+	this._updateDataSource=function(rows,pageIndex,pageSize){
+		//暂时简单处理，把数据放到指定位置，不考虑客户端的已有修改
+		var ds=this._getDataSource();
+		for(var i=pageIndex*pageSize,count=Math.min(pageSize,rows.length);count--;i++){
+			ds[i]=rows[i];
+		}
+	};
+	var countAdded=0;//记录添加的行的数量
+	this._setTotalCount=function(totalCount){
+		this._data.pageInfo.totalCount=totalCount||0;
+	}
 	//尝试获取当前页数据，如果当前页数据不全,返回null
 	this._getCurrentPageRows=function(){
 		var rows=[];
+		var ds=this._getDataSource();
 		var missing=cb.model.DataState.Missing;
 		var pageIndex=this._data.pageInfo.pageIndex,
 			pageSize=this._data.pageInfo.pageSize,
@@ -531,30 +613,31 @@ cb.model.Model3D = function (parent, name, data) {
 		}
 		return rows;
 	};
-	this.setPageSize = function (pageSize) {
+	this.setPageSize = function (pageSize,_inner) {//指定为内部调用时，仅仅更新内部状态，不刷新视图,加'_'前缀的参数只在内部可用
 		if(!this._pagination)throw('custom exception:unsupported!');
         if (pageSize == null) {
             return;
         }
         this._data.pageInfo.pageSize = pageSize;
 		this._data.pageInfo.pageIndex=0;
-		this._refreshDisplayRows();
+		if(_inner){this._refreshDisplayRows();}
     };
     this.getPageSize = function () {
 		if(!this._pagination)throw('custom exception:unsupported!');
-        return this._data.PageInfo.pageSize;
+        return this._data.pageInfo.pageSize;
     };
-	this.setPageIndex=this.gotoPage=function(index){
+	this.setPageIndex=this.gotoPage=function(index,_inner){
 		if(!this._pagination)throw('custom exception:unsupported!');
 		var pageCount=this.getPageCount();
 		if(index>=0&&index<pageCount){
 			this._data.pageInfo.pageIndex=index;
-			this._refreshDisplayRows();
+			if(_inner){this._refreshDisplayRows();}
 		}
 	};
 	
 	this.getPageIndex=function(){
 		if(!this._pagination)throw('custom exception:unsupported!');
+		return this._data.pageInfo.pageIndex;
 	};
 	this.getPageCount=function(){
 		if(!this._pagination)throw('custom exception:unsupported!');
@@ -582,58 +665,7 @@ cb.model.Model3D = function (parent, name, data) {
 		this.setPageIndex(this.getPageCount());
 	};
 	
-	//设置分页查询代理，设置后，本地的数据清空
-	this.setPageServer=function(pageSever){
-		if(!this._isRemote)throw('custom exception:unsupported!');
-		this._data.pageSever=pageSever;
-		this._data.dataSource=[];
-		this._refreshDisplayRows();
-	};
-	this._getPageServer=function(){
-		if(!this._isRemote()||this._data.pageSever)throw('custom exception:no pageServer');
-		return this._data.pageSever;
-	};
-	//分页请求返回后回调,context指定为this
-	var pageServerCallBack=$.proxy(function(data){
-		if(data.success){
-			var data=data.success;
-			this._setPageRows(data.Rows);
-			this._data.pageInfo.totalCount;
-			//this._data.pageInfo.pageCount=Math.ceil(this._data.pageInfo.totalCount/this.getPageSize());
-			//通知分页条更新
-			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
-		}else{
-			alert(data.fail.message);
-		}
-	},this);
-	//设置数据源，同时更新当前页数据
-	this.setDataSource=function(ds){
-		if(this._isRemote())return;//远程数据源不支持直接修改datasource，可以修改查询代理，间接修改datasource
-		
-		this._data.dataSource=ds||[];
-		this._refreshDisplayRows();
-	};
-	
-	//更新显示的数据行
-	this._refreshDisplayRows=function(){
-		var pageRows=this._getCurrentPageRows();
-		if(pageRows){
-			this._setPageRows(pageRows);
-		}else{//数据不全在本地
-			var pageServer=this._getPageServer();
-			var data={
-				pageIndex:this.getPageIndex(),
-				pageSize:this.getPageSize()
-			};
-			pageServer(data,pageServerCallBack);
-			
-		}
-	};
-	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
-	this._isRemote=function(){
-		return this._mode=='remote';
-	};
-
+////
     this.commitRows = function (rows) {
         if (!this._before("commitRows", rows))
             return;

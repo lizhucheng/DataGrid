@@ -25,9 +25,9 @@ DgViewModel.prototype.init = function () {
     };
 	*/
     //this.setProxy(proxyConfig);
-    //this.initData();
+    this.initData();
 };
 
 DgViewModel.prototype.initData = function () {
-    //DgViewModel_Extend.doAction("init_Extend", this);
+    DgViewModel_Extend.doAction("init_extend", this);
 };

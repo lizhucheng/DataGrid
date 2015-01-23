@@ -22,6 +22,9 @@
 	background-color:#0ff;/*焦点行的背景色应该和选中行相近，且较选中行浅*/
 }
 
+.grid .header  thead  tr  .cellBorder{
+	background-color:#fff;
+}
 .grid  .view{
 	width:100%;
 	height:100%;

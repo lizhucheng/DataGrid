@@ -162,7 +162,7 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		model.setFocusedRow(index);
 	};
 	//
-	this._set_pageInfo:function(control,pageInfo){
+	this._set_pageInfo=function(control,pageInfo){
 		//更新视图
 		if(control.pager){
 			control.pager.setPageInfo(pageInfo);

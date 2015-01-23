@@ -3,9 +3,14 @@
 
 var DgViewModel_Extend = {
     doAction: function (name, viewModel) {
-        
+        if (this[name])
+            this[name](viewModel);
     },
 	product:function (name, viewModel) {
         
-    }
+    },
+	init_extend:function(viewModel){
+		var gridModel = viewModel.getproduct();
+		gridModel.initDataSource();
+	}
 };

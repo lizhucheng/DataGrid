@@ -20,7 +20,7 @@ var options={
 		*/
 		mode:'remote',
 		//第一个元素表示用于请求数据的方法，第二个元素表示查询前用于收集查询参数的方法，每次请求
-		pageSever:serverQuery,
+		pageServer:{'query':pageQuery},
 		pageInfo:{
 			pageSize:50,
 			pageIndex:0
@@ -74,7 +74,7 @@ var options={
 	};
 
 //模拟的服务端
-var pageQuery=function(pageInfo,callback){
+function pageQuery(pageInfo,callback){
 	var pageSize=pageInfo.pageSize,
 		pageIndex=pageInfo.pageIndex;
 	var total=1125;
@@ -85,16 +85,17 @@ var pageQuery=function(pageInfo,callback){
 	for(var i=pageSize*pageIndex;i<end;i++){
 		rows.push(datasource[i]);
 	}
-	data.rows=rows;
-	data.success=true;
-	data.total=total;
+	var data={};
+	data.Rows=rows;
+	data.totalCount=total;
 	data.pageSize=pageSize;
 	data.pageIndex=pageIndex;
+	
 	//处理回调
 	if(callback){
-		callback(data);
+		callback({success:data});
 	}
-};
+}
 
 function getTestData(count){
 	var data=[];
