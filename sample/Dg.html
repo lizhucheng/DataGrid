@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
     <!--link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet" /-->
 	<link href="../css/Datagrid.css" rel="stylesheet" />
+	<link href="../plugins/Pager.css" rel="stylesheet" />
 	<style>
 	.gridContainer{float:left;}
 	#test{float:left;margin-left:50px;}
@@ -15,6 +16,7 @@
 	<div class="gridContainer">
 		<div id="Dg1" data-viewmodel="DgViewModel">
 			<div data-propertyname="product" data-controltype="DataGrid" class="grid" style="width:900px;height:400px;"></div>
+			<div class="pager1"></div>
 		</div>
 	</div>
 	<div id="test">
@@ -38,10 +40,12 @@
     <script src="../jquery/jquery-1.11.1.js" type="text/javascript"></script>
 	<script src="../jquery/jquery.event.drag-2.2.js"></script>
     <script src="../common/js/Cube.js" type="text/javascript"></script>
+	<script src="../common/js/Control.js"></script>
 	<script src="../common/js/GridVM.js" type="text/javascript"></script>
 	<script src="../common/js/DataGrid.binding.js" type="text/javascript"></script>
+	<script src="../common/js/TextBox.js"></script>
 	<script src="../common/js/DataGrid.js" type="text/javascript"></script>
-
+	<script src="../plugins/Pager.js" type="text/javascript"></script>
 	<script src="../test-grid/options.js" type="text/javascript"></script>
 	<script src="Dg.js" type="text/javascript"></script>
 	<script src="Dg_Extend.js" type="text/javascript"></script>

@@ -1,0 +1,38 @@
+
+.pager{
+	height:36px;
+	line-height:36px;
+	overflow:hidden;
+	white-space:nowrap;
+}
+.pager-left{float:left;}
+.pager-right{float:right;}
+.pager-btn{
+	display:inline-block;
+	width:32px;
+	height:32px;
+	vertical-align:middle;
+	background-position:0 -1px;
+	cursor:pointer;
+}
+.pager-first{background-image:url("../images/pager-first.png");}
+.pager-previous{background-image:url("../images/pager-previous.png");}
+.pager-next{background-image:url("../images/pager-next.png");}
+.pager-last{background-image:url("../images/pager-last.png");}
+.pager-first.disabled{background-image:url("../images/pager-first.png");}
+.pager-previous.disabled{background-image:url("../images/pager-previous.png");}
+.pager-next.disabled{background-image:url("../images/pager-next.png");}
+.pager-last.disabled{background-image:url("../images/pager-last.png");}
+
+.pager-currentPage{
+	width:32px;
+}
+.pager-size{
+	width:32px;
+}
+.pager .ui-field-contain{
+	display:inline-block;
+}
+.pager-totalCount{
+	
+}
