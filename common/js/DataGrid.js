@@ -36,7 +36,9 @@ Column.prototype={
 	headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 	width:120,	//宽度
 	sortable:true,
+	annexable:true,//列数据是否可合并，有时候同列的数据表示的意义不同，列内不支持合并（例如不同币种下的数值，此时合并会破坏数据意义）
 	order:'none',// 'asc','desc'
+	formatter:'defaultFormatter',
 	//sortStatus:0,//字段当前排序状态；值0、1、2分别表示未排序，递增排序，递减排序；这个信息在模型内部管理
 	autoWrap:false,//内容是否自动换行
 	//defaults~/
@@ -45,6 +47,9 @@ Column.prototype={
 	//cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 	//colStyle:function(index){},
 	//onclick:function(){}
+	getFormatter:function(){
+		return typeof this.formatter==='function'?this.formatter:DataGrid.Formatters[''+this.formatter]||DataGrid.Formatters['defaultFormatter'];
+	}
 };
 
 function createColumns(fields){
@@ -90,7 +95,9 @@ DataGrid.CHECKBOXCOL={
 	width:30,
 	sortable:false,
 	resizable:false,
-	content:'<input type="checkbox" />'
+	formatter:function(value,dataContext){
+		return '<input type="checkbox" class="checkable" />';
+	}
 };
 DataGrid.TEMPLATE='<div class="view">\
 	<div class="viewHeader">\
@@ -463,6 +470,7 @@ DataGrid.prototype={
 		var i=0+this.showCheckBox+this.showRowNo;
 		
 		for(var i=0+this.showCheckBox+this.showRowNo,len=cols.length;i<len;i++){
+			if(!cols[i].annexable)break;
 			field=cols[i][FIELDNAME_PROP];
 			cellsInCurCol=[];
 			for(var j=0;j<cellsInPreCol.length;j++){
@@ -633,18 +641,17 @@ DataGrid.prototype={
 					value=row[field];
 				}else if(field===DataGrid.ROWNOCOL[FIELDNAME_PROP]){
 					value=s+1;
-				}else{
-					value='<input class="checkable" type="checkbox" />'
 				}
-				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value,i<=frozenIndex?left:0,!i);
+				arr[j++]=this._getTdCellOuterHtml(this.cols[i],value,row,i<=frozenIndex?left:0,!i);
 			}
 			arr[j++]='</tr>';
 		}
 		
 		return arr.join('');
 	},
-	_getTdCellOuterHtml:function(col,value,left,first){
+	_getTdCellOuterHtml:function(col,value,dataContext,left,first){
 		//return '<td >'+value+'</td>';
+		var contentHtml=col.getFormatter().call(col,value,dataContext);
 		var arr=new Array(30),j=0;
 		arr[j++]='<td class="cell';
 		arr[j++]=first?' first':'';
@@ -652,7 +659,7 @@ DataGrid.prototype={
 		arr[j++]='">';
 		if(!left){
 			arr[j++]='<div class="cellContent">';
-			arr[j++]=value;	
+			arr[j++]=contentHtml;	
 			arr[j++]='</div><div class="cellBorder" style="background-color:';
 			//arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
 			arr[j++]=';"></div></td>';
@@ -660,7 +667,7 @@ DataGrid.prototype={
 			arr[j++]='<div class="cellContent" style="left:';
 			arr[j++]=left;
 			arr[j++]='px;">';
-			arr[j++]=value;	
+			arr[j++]=contentHtml;	
 			arr[j++]='</div><div class="cellBorder" style="background-color:';
 			//arr[j++]=COLORS[Math.floor(Math.random()*COLORS.length)];
 			arr[j++]=';left:';
@@ -745,6 +752,7 @@ DataGrid.prototype={
 	},
 	//根据指定合并信息合并单元格
 	mergeCells:function(mergeInfo){
+		if(!mergeInfo)return;
 		//去掉表头行,且转换为数组
 		var rows=this._getRows();
 		//合并时要从后面的列开始合并，否则不好定位要合并的单元格的水平索引

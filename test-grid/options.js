@@ -39,6 +39,7 @@ var options={
 				headerTextAlign:'center',	//表头文本水平对齐方式，默认居中
 				width:120,	//宽度
 				sortable:true,	//默认false
+				annexable:true,//列数据是否可合并，有时候同列的数据表示的意义不同，列内不支持合并（例如不同币种下的数值，此时合并会破坏数据意义）,默认true。
 				cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 				colStyle:function(index){},
 				onclick:function(){}
@@ -66,6 +67,7 @@ var options={
 			},
 			'effortDriven':{
 				type:'Boolean',
+				formatter:'CheckboxFormatter',
 				title:'effortDriven'
 			}	
 		},

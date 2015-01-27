@@ -259,6 +259,9 @@ cb.model.Model3D = function (parent, name, data) {
 		field2:[{index:2,rowspan:2}]
 	}
 	*/
+	this._getColumns=function(){
+		return this._data.Columns;
+	};
 	this._getMergeCells=function(){
 		var fields=this._data.fieldNames;
 		var count=0;//统计一共有多少可合并的单元格
@@ -268,8 +271,10 @@ cb.model.Model3D = function (parent, name, data) {
 		var cellsInCurCol;//当前列的合并单元格信息，当前列中合并的单元格信息依赖与前列的合并单元格信息
 		var field,//当前字段名
 			preMergeCell,preVal,val;//当前处理的列参照的前一列中合并的单元格
-		for(var i=0,len=fields.length;i<len;i++){
+		var cols=this._getColumns();
+		for(var i=0,len=fields.length;i<len;i++){		
 			field=fields[i];
+			if(!cols[field].annexable)break;
 			cellsInCurCol=[];
 			for(var j=0;j<cellsInPreCol.length;j++){
 				preMergeCell=cellsInPreCol[j];
