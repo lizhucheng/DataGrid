@@ -39,18 +39,20 @@
 
 	width:100%;
 	overflow:hidden;
+	
 }
 .grid  .header{
 	white-space:nowrap;
 	width:10000px;
 }
+
 .grid  .header>div{
 	float:left;
 	overflow:hidden;
 	
 }
 .grid  .header .cellContent{white-space:nowrap;}
-.grid thead td{height:30px;}
+.grid thead td{height:30px;text-align:center;white-space:nowrap;}
 .grid .header1{
 	position:relative;
 	z-index:12;
@@ -198,19 +200,20 @@
 	display:none;
 	background-color:transparent;
 }
+.grid .title{
+	padding:0 18px;
+}
 .grid .sortIcon{
-	margin-left:2px;
+	margin-left:-16px;
 	width:16px;
 	height:16px;
-	display:none;
+	display:inline-block;
 	vertical-align:middle;
 }
 .grid  .sortAsc .sortIcon{
-	display:inline-block;
 	background:url(../images/sort_icons.png) no-repeat 0 0;
 }
 .grid  .sortDesc  .sortIcon{
-	display:inline-block;
 	background:url(../images/sort_icons.png) no-repeat -16px 0;
 }
 

@@ -55,6 +55,7 @@ var options={
 			},
 			'percentComplete':{
 				type:'Number',
+				formatter:'PercentFormatter',
 				title:'percentComplete'
 			},
 			'start':{

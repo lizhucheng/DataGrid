@@ -29,7 +29,6 @@ Column.prototype={
 	constructor:Column,
 	
 	//defaults/~
-	headerTextAlign:'center',
 	visible:true,	//列是否可见
 	resizable:true,	//列是否可拖动改变列宽
 	textAlign:'left',	//列文本水分方向对齐方式
