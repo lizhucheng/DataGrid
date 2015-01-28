@@ -127,6 +127,7 @@ DataGrid.TEMPLATE='<div class="view">\
 	<div class="viewBody">\
 		<table><thead></thead><tbody></tbody></table>\
 		<div class="refLine"></div>\
+		<div class="frozenBoundary"><div></div></div>\
 	</div>\
 </div>'
 //const~/
@@ -170,23 +171,31 @@ DataGrid.prototype={
 		$.extend(true,this,opts);
 		this.cols=createColumns(fields);
 		
+		var frozenField='';
 		//检查是否有行号列、checkbox列
 		if(this.showCheckBox){
 			this.cols.unshift(new Column(DataGrid.CHECKBOXCOL));
+			frozenField=DataGrid.CHECKBOXCOL[FIELDNAME_PROP];
 		}
 		if(this.showRowNo){
 			this.cols.unshift(new Column(DataGrid.ROWNOCOL));	
+			frozenField=frozenField||DataGrid.ROWNOCOL[FIELDNAME_PROP];
 		}
 		
 		this._rebuildColMap();
-		this._setFrozenField(this.frozenField||'');
+		//初始化固定列边界
+		//如果指定的列存在，则用指定的列作为边界，否则根据是否显示行序号列和checkbox选择相应的列作为固定边界。
+		frozenField=this.getColumn(this.frozenField||'')?this.frozenField:frozenField;
+		this._setFrozenField(frozenField,true);
 		
 		this.sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
 	},
 	//只设置状态，不改变视图
-	_setFrozenField:function(field){
+	_setFrozenField:function(field,inner){
 		var col=this.getColumn(field);
-		if(field==DataGrid.ROWNOCOL[FIELDNAME_PROP] || field==DataGrid.ROWNOCOL[FIELDNAME_PROP])return;
+		//if(!inner){//使在内部支持设置行序列和checkbox列为固定列边界
+			//if(field==DataGrid.ROWNOCOL[FIELDNAME_PROP] || field==DataGrid.ROWNOCOL[FIELDNAME_PROP])return;
+		//}
 		if(col){
 			this.frozenField=field;
 			this.frozenIndex=this.cols.indexOf(col);
@@ -205,7 +214,7 @@ DataGrid.prototype={
 		}
 	},
 	frozeColumn:function(field){
-		if(this.getColumn(field)){return;}
+		if(!this.getColumn(field)){return;}
 		
 		var original=this.frozenIndex;
 		this._setFrozenField(field);
@@ -275,6 +284,7 @@ DataGrid.prototype={
 			}
 		}
 		this.$el[this.frozenIndex==-1?'addClass':'removeClass']('noFrozen');
+		this._fixFrozenHandlerPosition();
 	},
 	/*渲染整个表格控件，包括表头和表数据,表尾（注：分页以插件的形势存在，Grid可添加分页插件，为分页插件提供和model交互的接口，通过接口转发分页插件的命令）*/
 	render:function(data){
@@ -307,9 +317,22 @@ DataGrid.prototype={
 		this._lastScrollLeft=0;
 	
 		this._initEvents();
+		//调整固定边界位置
+		this._fixFrozenHandlerPosition();
 		
 		view=null;
 		if(data instanceof Array){this.loadData(data);}
+	},
+	//根据当前固定列位置，调整固定边界操作区域位置
+	_fixFrozenHandlerPosition:function(){
+		var left=0;
+		for(var i=0,len=this.frozenIndex;i<=len;i++){
+			if(this.cols[i].visible){
+				left+=this.cols[i].width;
+			}
+		}
+		var view=this.$el.children('.view');
+		$('.frozenBoundary',view).css('left',left+view[0].scrollLeft+'px');
 	},
 	_initEvents:function(){
 		//固定列实现
@@ -320,19 +343,17 @@ DataGrid.prototype={
 		});
 		
 		//拖动调整列宽
-		$('.header .col-resizer',view).drag('drag',function(ev, dd){
-			$(this).css('right',-6-dd.deltaX);
-			
-		}).drag('draginit',function(ev, dd){
+		$('.header .col-resizer',view).drag('draginit',function(ev, dd){
 			$(this).addClass('active');
 			
 			var left=dd.offsetX-$('.view .viewBody',dg.$el).offset().left+6;
-			$('.view .refLine',dg.$el).css('left',left);
+			$('.view .refLine',dg.$el).css('left',left+'px');
 			$('.view .refLine',dg.$el).show();
 		}).drag('drag',function(ev, dd){
+			$(this).css('right',-6-dd.deltaX);
 			//实时显示参照线
 			var left=dd.offsetX-$('.view .viewBody',dg.$el).offset().left+6;
-			$('.view .refLine',dg.$el).css('left',left);
+			$('.view .refLine',dg.$el).css('left',left+'px');
 			
 		}).drag('dragend',function(ev, dd){
 			$(this).addClass('active');
@@ -358,8 +379,40 @@ DataGrid.prototype={
 			$('.view .refLine',dg.$el).hide();
 			dg.setColWidth(field,width);
 		});
-		
-		
+		//拖动固定列边界，设置固定列位置
+		$('.frozenBoundary',view).drag('draginit',function(ev, dd){
+			$('.view',dg.$el)[0].scrollLeft=0;
+		}).drag('drag',function(ev, dd){
+			var left=dd.offsetX-$('.view .viewBody',dg.$el).offset().left;
+			$(this).css('left',left+'px');		
+		}).drag('dragend',function(ev, dd){
+			var left=dd.offsetX-$('.view .viewBody',dg.$el).offset().left;
+			
+			//确定边界所在的列
+			var cols=dg.cols;
+			var width=0;
+			var i=-1;
+			while(width<left){
+				i++;
+				if(cols[i].visible){
+					width+=cols[i].width;
+				}
+			}
+
+			if(i<dg.showCheckBox+dg.showRowNo-1){
+				//使不能把固定列设置在checkbox列之前
+				i=dg.showCheckBox+dg.showRowNo-1;
+				width=0;
+				for(var j=0;j<=i;j++){
+					if(cols[i].visible){
+						width+=cols[i].width;
+					}
+				}
+			}
+			$(this).css('left',width+'px');
+			dg._frozeColByIndex(i);
+		})
+		//
 		$('.viewHeader .cell',this.$el).on('click',function(evt){
 			//拖动手柄上的点击不处理
 			if($(evt.target).is('.col-resizer'))return;
@@ -453,6 +506,7 @@ DataGrid.prototype={
 			console.log('垂直滚动，不处理水平定位');
 			return;
 		}
+		var scrollDelta=view[0].scrollLeft-this._lastScrollLeft;
 		this._lastScrollLeft=view[0].scrollLeft;
 		
 		var tb=$('.viewBody>table',this.$el);
@@ -465,7 +519,12 @@ DataGrid.prototype={
 		
 		$('.viewHeader',view)[0].style.left=left;
 		$('.header2>table',view)[0].style.marginLeft=0-view[0].scrollLeft+'px';
-		
+		//处理固定列边界
+		var frozenBoundary=$('.frozenBoundary',view);
+		if(frozenBoundary){
+			frozenBoundary[0].style.left=scrollDelta+(parseInt(frozenBoundary.css('left'))||0)+'px';
+		}
+
 		var rowSpan=new Array(end-1);
 		$.each(rowSpan,function(i,item){item=0;});
 		for(var i=0,len=rows.length;i<len;i++){
@@ -566,6 +625,13 @@ DataGrid.prototype={
 		var index=this.cols.indexOf(this._nameColMap[field]);
 		//更新列width属性
 		this.cols[index].width=width;
+		//更新固定列边界位置
+		if(index<=this.frozenIndex){
+			var frozenBoundary=$('.frozenBoundary',this.$el);
+			if(frozenBoundary){
+				frozenBoundary[0].style.left=delta+(parseInt(frozenBoundary.css('left'))||0)+'px';
+			}
+		}
 		
 	},
 	_getColIndex:function(field){
@@ -610,9 +676,9 @@ DataGrid.prototype={
 	_getTheaderHtml:function(frozen,noTr){//frozen标识是否获取固定列对应的表头
 		var colCount=this.cols.length,
 			arr=new Array(30),
-			frozenColIndex=this.frozenIndex,	
-			start=!frozen ? frozenColIndex+1:0,
-			end=!frozen ?colCount:frozenColIndex+1,
+			frozenIndex=this.frozenIndex,	
+			start=!frozen ? frozenIndex+1:0,
+			end=!frozen ?colCount:frozenIndex+1,
 			j=0,
 			i=start;
 			
