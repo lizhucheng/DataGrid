@@ -115,11 +115,11 @@
 	position:relative;
 	top:0;
 	left:0;
-	padding:2px 5px;
+	padding:2px 5px 2px 4px;
 	margin:1px;
 }
 .grid   thead  .cell  .cellContent{
-	padding:2px 0px;
+	padding:2px 1px 2px 0;
 }
 /*处理层级关系*/
 .grid   .cell{

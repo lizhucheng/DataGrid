@@ -103,14 +103,14 @@ DataGrid.BORDERWIDTH=1;
 DataGrid.ROWNOCOL={
 	$name:'__rowNo',
 	type:'Number',
-	width:30,
+	width:35,
 	sortable:false,
 	resizable:false
 };
 DataGrid.CHECKBOXCOL={
 	$name:'__chkBox',
 	type:'Boolean',
-	width:30,
+	width:35,
 	sortable:false,
 	resizable:false,
 	formatter:function(value,dataContext){
@@ -181,7 +181,7 @@ DataGrid.prototype={
 		this._rebuildColMap();
 		this._setFrozenField(this.frozenField||'');
 		
-		this._sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
+		this.sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
 	},
 	//只设置状态，不改变视图
 	_setFrozenField:function(field){
@@ -382,9 +382,9 @@ DataGrid.prototype={
 				}
 				
 			}else{
-				//sortFields=$.extend([],this._sortFields);
+				
 				//本来这个地方应该使用副本的，此处不处理状态，只收集参数数据；但考虑到，事件后肯定要更新状态，所以就容忍局部的状态不统一了
-				sortFields=cb.clone(dg.getSortFields());
+				sortFields=clone(dg.getSortFields());
 				var existed=false;
 				$.each(sortFields,function(i,item){
 					if(item[0]===field){
@@ -743,7 +743,7 @@ DataGrid.prototype={
 			}
 		}
 
-		this.sortFields=cb.clone(fields);
+		this.sortFields=clone(fields);
 		var args={sortFields:fields,noReflesh:false};
 		//说明不刷新数据和没指定排序字段时不更新model
 		if(noReflesh ||!fields.length){
@@ -930,7 +930,31 @@ DataGrid.prototype={
 	
 	___end:''
 }
-
+//支持数组项内的扩展
+function extend(post,back) {
+	if (!back || typeof back != 'object') return;
+	post=post||{};
+	var src, target;
+	//处理数组的扩展
+	if (back instanceof Array) {
+		post = post instanceof Array ? post : [];
+	}
+	for (var i in back) {
+		src = back[i];
+		target = post[i];
+		if (src && typeof src == 'object') {
+			if (typeof target != 'object') target = {};
+			post[i] = extend(target, src);
+		} else if (src != null) {
+			post[i] = src;
+		}
+	}
+	return post;
+}
+//(特别地，支持对象和数组的深度复制)
+function clone(obj){
+	return extend({},obj);
+}
 //选中行classname和当前焦点行classname
 var SELECTED='selected',FOCUSED='focused';
 var rwhitespace=/\s+/;
