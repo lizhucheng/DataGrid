@@ -222,4 +222,7 @@
 .grid  .sortDesc  .sortIcon{
 	background:url(../images/sort_icons.png) no-repeat -16px 0;
 }
-
+/*列对齐关联的class定义*/
+.grid .textAlignLeft{text-align:left;}
+.grid .textAlignRight{text-align:right;}
+.grid .textAlignCenter{text-align:center;}

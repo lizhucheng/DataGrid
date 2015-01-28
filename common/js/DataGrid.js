@@ -41,13 +41,30 @@ Column.prototype={
 	//sortStatus:0,//字段当前排序状态；值0、1、2分别表示未排序，递增排序，递减排序；这个信息在模型内部管理
 	autoWrap:false,//内容是否自动换行
 	//defaults~/
-	
+	type:'String',//列数据类型，默认为字符串类型
 	//getName:function(){return this.[FIELDNAME_PROP];},//不提供这个方法了，直接使用this.[FIELDNAME_PROP]避免函数调用
 	//cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 	//colStyle:function(index){},
 	//onclick:function(){}
 	getFormatter:function(){
 		return typeof this.formatter==='function'?this.formatter:DataGrid.Formatters[''+this.formatter]||DataGrid.Formatters['defaultFormatter'];
+	},
+	//获取当前列的列对齐方式
+	getTextAlign:function(){
+		var alignClsMap={
+			left:'textAlignLeft',
+			right:'textAlignRight',
+			center:'textAlignCenter'
+		};
+		var textAlign=this.textAlign.toLowerCase();
+		if(!this.hasOwnProperty('textAlign')||!textAlign||!alignClsMap[textAlign]){//如果列没定义对齐方式，或定义的对齐方式无效，则根据类型使用类型默认的对齐方式
+			switch(this.type.toLowerCase()){
+				case 'number':textAlign='right';break;
+				case 'boolean':textAlign='center';break;
+				default:textAlign='left';break;
+			}
+		}
+		return textAlign==='right'||textAlign==='center'?alignClsMap[textAlign]:'';//默认居左,不设置className
 	}
 };
 
@@ -85,12 +102,14 @@ DataGrid.CELLPADDING=1;
 DataGrid.BORDERWIDTH=1;
 DataGrid.ROWNOCOL={
 	$name:'__rowNo',
+	type:'Number',
 	width:30,
 	sortable:false,
 	resizable:false
 };
 DataGrid.CHECKBOXCOL={
 	$name:'__chkBox',
+	type:'Boolean',
 	width:30,
 	sortable:false,
 	resizable:false,
@@ -662,6 +681,7 @@ DataGrid.prototype={
 		var contentHtml=col.getFormatter().call(col,value,dataContext);
 		var arr=new Array(30),j=0;
 		arr[j++]='<td class="cell';
+		arr[j++]=' '+col.getTextAlign();
 		arr[j++]=first?' first':'';
 		arr[j++]=col[FIELDNAME_PROP]!==this.frozenField?'':' frozen';
 		arr[j++]='">';
