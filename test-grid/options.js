@@ -45,7 +45,7 @@ var options={
 				onclick:function(){}
 			},
 			'duration':{
-				type:'Number',
+				type:'String',
 				sortable:false,
 				title:'duration'
 			},

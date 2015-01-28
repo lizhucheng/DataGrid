@@ -73,6 +73,9 @@
 	border-spacing:0;	
 	border-style:solid;
 }
+.grid  .autoLayout  .header table,.grid  .autoLayout .viewBody >table{
+	table-layout:auto;
+}
 .grid  .header table{
 	border-width:1px 0 0 0;
 }
@@ -112,10 +115,12 @@
 	position:relative;
 	top:0;
 	left:0;
-	padding:2px;
+	padding:2px 5px;
 	margin:1px;
 }
-
+.grid   thead  .cell  .cellContent{
+	padding:2px 0px;
+}
 /*处理层级关系*/
 .grid   .cell{
 	z-index:5;
@@ -207,7 +212,7 @@
 	background-color:transparent;
 }
 .grid .title{
-	padding:0 18px;
+	padding:0 16px;
 }
 .grid .sortIcon{
 	margin-left:-16px;

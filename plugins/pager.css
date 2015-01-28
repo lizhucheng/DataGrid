@@ -6,7 +6,7 @@
 	white-space:nowrap;
 }
 .pager-left{float:left;}
-.pager-right{float:right;}
+.pager-right{float:right;margin-right:25px;}
 .pager-btn{
 	display:inline-block;
 	width:32px;

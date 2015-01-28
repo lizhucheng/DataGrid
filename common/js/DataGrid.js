@@ -345,6 +345,18 @@ DataGrid.prototype={
 			$(this).css('right',-6);
 			$(this).removeClass('active');
 			$('.view .refLine',dg.$el).hide();
+		}).on('dblclick',function(evt){
+			var view=dg.$el.children('.view');
+			view.addClass('autoLayout');
+			var field=$(this).closest('td').data('field');
+			var width=0;
+			view.find('thead td[data-field='+field+']').each(function(i,td){
+				width=Math.max(width,$(td).width());
+			});
+			
+			view.removeClass('autoLayout');
+			$('.view .refLine',dg.$el).hide();
+			dg.setColWidth(field,width);
 		});
 		
 		

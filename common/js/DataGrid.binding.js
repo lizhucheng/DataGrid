@@ -164,10 +164,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	//
 	this._set_pageInfo=function(control,pageInfo){
 		//更新视图
-		var model = this.getModel();
-		model._pager
-		if(model._pager){
-			model._pager.update(pageInfo);
+		//var model = this.getModel();
+		//model._pager
+		if(this._pager){
+			this._pager.update(pageInfo);
 		}
 	},
 	
@@ -284,9 +284,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         model.addListener(this);
 		//
 		if(model._pagination&& model._data.pager){
-			var pager=new cb.controls['Pager']($(model._data.pager),model);
+			var viewModelEl=this.getControl().$el.closest('[data-viewmodel='+model._parent.getModelName()+']');
+			var pager=new cb.controls['Pager']($(model._data.pager,viewModelEl),model);
 			pager.update(model._data.pageInfo);
-			model._pager=pager;
+			this._pager=pager;
 		}
     };
 };
