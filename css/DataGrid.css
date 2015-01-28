@@ -120,6 +120,7 @@
 .grid   .cell{
 	z-index:5;
 }
+
 .grid    .cellBorder{
 	z-index:6;
 	/*background-color:transparent;*/
@@ -131,6 +132,7 @@
 .grid    .frozen~.cell {
 	z-index:1;
 }
+
 .grid    .frozen~.cell  .cellBorder{
 	z-index:3;
 	/*background-color:transparent;*/
@@ -139,8 +141,12 @@
 	z-index:4;
 }
 
-.grid   .first .cellBorder{
-	border-style:hidden solid solid solid;
+/*固定区的合并的单元格层级要高一点*/
+.grid   .cell[rowspan]{
+	z-index:8;
+}
+.grid    .frozen~.cell[rowspan] {
+	z-index:1;
 }
 
 

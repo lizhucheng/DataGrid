@@ -435,12 +435,21 @@ DataGrid.prototype={
 		$('.viewHeader',view)[0].style.left=left;
 		$('.header2>table',view)[0].style.marginLeft=0-view[0].scrollLeft+'px';
 		
-		
+		var rowSpan=new Array(end-1);
+		$.each(rowSpan,function(i,item){item=0;});
 		for(var i=0,len=rows.length;i<len;i++){
 			tds=slice.call(rows[i].cells,0,end);
-			for(var j=0,q=tds.length;j<q;j++){
-				tds[j].firstChild.style.left=left;
-				tds[j].lastChild.style.left=left;	
+			for(var j=0;j<end;j++){				
+				if(!rowSpan[j]){
+					var td=tds.shift();
+					td.firstChild.style.left=left;
+					td.lastChild.style.left=left;
+					if(td.rowSpan){
+						rowSpan[j]=td.rowSpan-1;
+					}
+				}else{//同列中前面的行的rowSpan到达当前位置时，这个td不存在，不需要处理
+					rowSpan[j]--;
+				}
 			}
 		}
 		
@@ -765,6 +774,10 @@ DataGrid.prototype={
 					//先删除将被合并的单元格
 					var j=cell.index+1,end=cell.index+cell.rowspan;
 					for(;j<end;j++){
+						//如果当前被合并的单元格处于固定列边界，则边界前移
+						if($(rows[j].cells[k]).is('.frozen')){
+							rows[j].cells[k-1]&&$(rows[j].cells[k-1]).addClass('frozen');
+						}
 						rows[j].removeChild(rows[j].cells[k]);
 					}
 					rows[cell.index].cells[k].setAttribute('rowspan',cell.rowspan);
