@@ -11,6 +11,6 @@ var DgViewModel_Extend = {
     },
 	init_extend:function(viewModel){
 		var gridModel = viewModel.getproduct();
-		gridModel.initDataSource();
+		gridModel.setDataSource();
 	}
 };

@@ -825,6 +825,7 @@ DataGrid.prototype={
 		delete options.Columns;
 		//options.rows=data.Rows;
 		var fields=[];
+		
 		var fieldName,fieldInfo;
 		for(var i=0,len=data.fieldNames.length;i<len;i++){
 			fieldName=data.fieldNames[i];
