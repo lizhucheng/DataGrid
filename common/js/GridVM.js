@@ -50,7 +50,7 @@ cb.model.Model3D = function (parent, name, data) {
             if (!row || !cellName)
                 return row; //如果列名称cellName为空，则返回行
             var cell = row[cellName];
-            return (cell && typeof cell === "object") ? cell.Value : cell;
+            return (cell && typeof cell === "object") ? cell.value : cell;
         }
         else {
             //如果状态属性propertyName != 空，则表示要获取状态值
@@ -91,78 +91,66 @@ cb.model.Model3D = function (parent, name, data) {
             if (oldValue === value)
                 return;
 
-            var context = { Row: rowIndex, CellName: cellName, Value: value, OldValue: oldValue };
-            if (!this._before("CellValueChange", context))
+            var data = { rowIndex: rowIndex, cellName: cellName, value: value, oldValue: oldValue };
+            if (!this._before("CellValueChange", data))
                 return false;
             if (cellIsObject)
-                cell.Value = value;
+                cell.value = value;
             else
                 row[cellName] = value;
             row.state = cb.model.DataState.Update;
 
-            var args = new cb.model.PropertyChangeArgs(this._name, "CellValueChange", context);
+            var args = new cb.model.PropertyChangeArgs(this._name, "CellValueChange", data);
             this.PropertyChange(args);
 
-            this._after("CellValueChange", context); //值变化出发,无焦点要求
+            this._after("CellValueChange", data); //值变化出发,无焦点要求
         }
         else {
-            //获取整个控件状态
+            //设置控件状态
             if (rowIndex < 0 && !cellName) {
                 var oldValue = this._data[propertyName];
                 if (cb.isEqual(oldValue,value))//有时候属性值为对象
                     return false;
 
-                var context = { PropertyName: propertyName, Value: value, OldValue: oldValue };
-                if (!this._before("StateChange", context))
+                var data = { propertyName: propertyName, value: value, oldValue: oldValue };
+                if (!this._before("StateChange", data))
                     return false;
 
                 this._data[propertyName] = value;
 
-                /*遍历性能不好,不需要遍历
-                //是否需要增加遍历每个单元格的propertyName属性
-                for (var i = 0; i < this._data.Rows.length; i++) {
-                this.set(i, null, propertyName, value);
-                }
-                */
-
                 var args = new cb.model.PropertyChangeArgs(this._name, propertyName, value,oldValue);
                 this.PropertyChange(args);
 
-                this._after("StateChange", context);
+                this._after("StateChange", data);
 
             }
-            //获取列状态
+            //设置列状态
             else if (rowIndex < 0 && cellName) {
                 var oldValue = this._data.Columns[cellName][propertyName];
                 if (oldValue === value)
                     return false;
 
-                var context = { Row: rowIndex, CellName: cellName, PropertyName: propertyName, Value: value, OldValue: oldValue, Columns: this._data.Columns };
-                if (!this._before("ColumnStateChange", context))
+                var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue, columns: cb.clone(this._data.Columns) };
+                if (!this._before("ColumnStateChange", data))
                     return false;
-
-                this._data.Columns[cellName] = this._data.Columns[cellName] || {};
+				
+				
+                this._data.Columns[cellName] = this._data.Columns[cellName] || {};//这样可能会增加新列
                 this._data.Columns[cellName][propertyName] = value;
 
-                /*遍历性能不好,不需要遍历
-                //是否需要增加遍历每个单元格的propertyName属性???
-                for (var i = 0; i < this._data.Rows.length; i++) {
-                this.set(i, cellName, propertyName, value);
-                }
-                */
-                var args = new cb.model.PropertyChangeArgs(this._name, "ColumnStateChange", context);
+                var args = new cb.model.PropertyChangeArgs(this._name, "ColumnStateChange", data);
                 this.PropertyChange(args);
 
                 this._after("ColumnStateChange", context);
             }
-            //获取行状态
+            //设置行状态
             else if (rowIndex >= 0 && !cellName) {
                 var oldValue = this._data.Rows[rowIndex][propertyName];
                 if (oldValue === value)
                     return;
 
-                var context = { Row: rowIndex, PropertyName: propertyName, Value: value, OldValue: oldValue };
-                if (!this._before("StateChange", context))
+                var data = { rowIndex: rowIndex, propertyName: propertyName, value: value, oldValue: oldValue };
+                if (!this._before("StateChange", data))
                     return false;
 
                 if (!value && (propertyName == "readOnly" || propertyName == "disabled")) {
@@ -172,19 +160,13 @@ cb.model.Model3D = function (parent, name, data) {
                 else {
                     this._data.Rows[rowIndex][propertyName] = value;
                 }
-                /*遍历性能不好,不需要遍历
-                //是否需要增加遍历每个单元格的propertyName属性???
-                var columns = this._data.Columns;
-                for (var column in columns) {
-                this.set(rowIndex, column, propertyName, value);
-                }
-                */
-                var args = new cb.model.PropertyChangeArgs(this._name, "RowStateChange", context);
+
+                var args = new cb.model.PropertyChangeArgs(this._name, "RowStateChange", data);
                 this.PropertyChange(args);
 
-                this._after("RowStateChange", context);
+                this._after("RowStateChange", data);
             }
-            //获取单元格状态
+            //设置单元格状态
             else if (rowIndex >= 0 && cellName) {
                 var cell = this._data.Rows[rowIndex][cellName];
                 var isObject = (cell && typeof cell == "object");
@@ -192,8 +174,8 @@ cb.model.Model3D = function (parent, name, data) {
                 if (oldValue === value)
                     return;
 
-                var context = { Row: rowIndex, CellName: cellName, PropertyName: propertyName, Value: value, OldValue: oldValue };
-                if (!this._before("CellStateChange", context))
+                var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue };
+                if (!this._before("CellStateChange", data))
                     return false;
 
                 if (cb.isEmpty(value)) {
@@ -215,17 +197,17 @@ cb.model.Model3D = function (parent, name, data) {
                 }
                 else {
                     if (!isObject)
-                        cell = this._data.Rows[rowIndex][cellName] = { Value: cell };
+                        cell = this._data.Rows[rowIndex][cellName] = { value: cell };
                     cell[propertyName] = value;
                 }
-                var args = new cb.model.PropertyChangeArgs(this._name, "CellStateChange", context);
+                var args = new cb.model.PropertyChangeArgs(this._name, "CellStateChange", data);
                 this.PropertyChange(args);
 
-                this._after("CellStateChange", context);
+                this._after("CellStateChange", data);
             }
         }
 
-        this.syncEditRowModel(rowIndex, cellName, propertyName, value); //需要优化一下，看放在哪里效率高
+        //this.syncEditRowModel(rowIndex, cellName, propertyName, value); //需要优化一下，看放在哪里效率高
     };
 	
 	//自动换行
@@ -398,6 +380,7 @@ cb.model.Model3D = function (parent, name, data) {
     this.setReadOnly = function (rowIndex, cellName, value) {
         if (arguments.length == 0)
             return;
+		//使支持 setReadOnly(value),setReadOnly(rowIndex,value),setReadOnly(cellName,value)
         if (arguments.length == 1) {
             value = arguments[0];
             rowIndex = -1;
@@ -444,10 +427,10 @@ cb.model.Model3D = function (parent, name, data) {
         var oldValue = this.getCellValue(rowIndex, cellName);
         if (oldValue === value)
             return false;
-        var context = { Row: rowIndex, CellName: cellName, Value: value, OldValue: oldValue };
-        if (this._before("CellChange", context)) {
+        var data = { rowIndex: rowIndex, cellName: cellName, value: value, oldValue: oldValue };
+        if (this._before("CellChange", data)) {
             this.setCellValue(rowIndex, cellName, value);
-            this._after("CellChange", context)
+            this._after("CellChange", data)
             return true;
         }
     };
@@ -1083,8 +1066,6 @@ cb.model.Model3D.prototype.setData = function (data) {
         return;
     if (arguments.length == 1 && !typeof data == "object") //if (data.constructor != Object || data.constructor != Array)
         return;
-    if (data.constructor == Array)
-        data = { Rows: data };
     if (arguments.length == 2) {
         var tempData = {};
         tempData[arguments[0]] = arguments[1];

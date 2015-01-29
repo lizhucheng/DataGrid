@@ -398,12 +398,6 @@ cb.model.BaseModel = function (parent, name, data) {
             delete this._data[attr];
         }
     }
-    //大小写适应, 后续需要考虑其他方案
-    //this._data.value = this._data.value || this._data.Value || null;
-    if (!this._data.value) {
-        //delete this._data.value;
-        //delete this._data.Value;
-    }
     this._data.readOnly = this._data.readOnly || this._data.ReadOnly || this._data.readonly || false;
     if (!this._data.readOnly) {
         delete this._data.ReadOnly;
