@@ -38,7 +38,7 @@ cb.onReady = cb.ready = function (callback) {
 
             cb.console.log("ready", document.readyState);
 
-            cb.events.excute.call(cb, "ready");
+            cb.events.execute.call(cb, "ready");
             cb.events.un.call(cb, "ready");
 
             if (document.removeEventListener)
@@ -84,7 +84,7 @@ cb.define = function (newClass, base, init, methods) {
     window[newClass] = function (options) {
         if (base)
             base.call(this, options);
-        this._excuteInits(options);
+        this._executeInits(options);
     };
 
     if (base) {
@@ -96,7 +96,7 @@ cb.define = function (newClass, base, init, methods) {
     window[newClass].addInit = function (func) {
         newClass.prototype._inits.push(func);
     }
-    window[newClass].prototype._excuteInits = function (options) {
+    window[newClass].prototype._executeInits = function (options) {
         for (var i = 0; i < this._inits.length; i++) {
             this._inits[i].call(this, options);
         }
@@ -173,7 +173,7 @@ cb.events.hasEvent = function (name) {
     name = name.toLowerCase(); //一律使用小写
     return (name && this._events && this._events[name] && this._events[name].length > 0);
 }
-cb.events.excute = function (name, args) {
+cb.events.execute = function (name, args) {
     if (!name) return;
     name = name.toLowerCase(); //一律使用小写
     var events = this._events ? this._events[name] : null;
@@ -545,9 +545,9 @@ cb.model.SimpleModel = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
 
     this.setDataSource = function (ds) {
-        if (this.excute("beforedatasourcechange", ds)) {
+        if (this.execute("beforedatasourcechange", ds)) {
             this.set("dataSource", ds);
-            this.excute("afterdatasourcechange", ds);
+            this.execute("afterdatasourcechange", ds);
             return true;
         }
     };
@@ -600,7 +600,7 @@ cb.model.SimpleModel = function (parent, name, data) {
             return false;
         var args = { Value: newValue, OldValue: oldValue };
         if (this._before("change", args)) {
-            if (this.excute("change", args))
+            if (this.execute("change", args))
                 this.valueChange(newValue);
             this._after("change", args);
             return true;
@@ -613,16 +613,16 @@ cb.model.SimpleModel = function (parent, name, data) {
 
     this.fireEvent = function (eventName, args) {
         if (this._before(eventName, args)) {
-            this.excute(eventName, args);
+            this.execute(eventName, args);
             this._after(eventName, args);
             return true;
         }
     };
     this._before = function (eventName) {
-        return this.excute("before" + eventName);
+        return this.execute("before" + eventName);
     };
     this._after = function (eventName) {
-        return this.excute("after" + eventName);
+        return this.execute("after" + eventName);
     };
 }
 cb.model.Model2D = function (parent, name, data) {
@@ -799,7 +799,7 @@ cb.model.Model2D = function (parent, name, data) {
         return;
         //        if (this._before("click", this)) {
         //            //this.setFocusedRow(row);
-        //            this.excute("click", row);
+        //            this.execute("click", row);
         //            this._after("click", this);
         //            this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "click", row));
         //        }
@@ -810,7 +810,7 @@ cb.model.Model2D = function (parent, name, data) {
         if (this._before("doubleClick", this)) {
             // this.setFocusedRow(row);            
             this.expand(row, !row.Expanded);
-            //this.excute("doubleClick", row);
+            //this.execute("doubleClick", row);
             this._after("doubleClick", this);
             this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "doubleClick", row));
 
@@ -818,17 +818,17 @@ cb.model.Model2D = function (parent, name, data) {
     };
 
     this.fireEvent = function (eventName, args) {
-        if (this.excute("before" + eventName, args)) {
-            this.excute(eventName, args);
-            this.excute("after" + eventName, args);
+        if (this.execute("before" + eventName, args)) {
+            this.execute(eventName, args);
+            this.execute("after" + eventName, args);
         }
     };
 
     this._before = function (eventName) {
-        return this.excute("before" + eventName);
+        return this.execute("before" + eventName);
     };
     this._after = function (eventName) {
-        return this.excute("after" + eventName);
+        return this.execute("after" + eventName);
     };
 
     this.sort = function (field, direction) {
@@ -1706,15 +1706,15 @@ cb.model.Model3D = function (parent, name, data) {
     }
 
     this._before = function (eventName, args) {
-        return this.excute("before" + eventName, args);
+        return this.execute("before" + eventName, args);
     }
     this._after = function (eventName, args) {
-        return this.excute("after" + eventName, args);
+        return this.execute("after" + eventName, args);
     }
     this.fireEvent = function (eventName, args) {
-        if (this.excute("before" + eventName, args)) {
-            this.excute(eventName, args);
-            this.excute("after" + eventName, args);
+        if (this.execute("before" + eventName, args)) {
+            this.execute(eventName, args);
+            this.execute("after" + eventName, args);
         }
     };
 
@@ -2145,10 +2145,10 @@ cb.model.ContainerModel = function (parent, name, data) {
     };
 
     this._before = function (name) {
-        return this.excute("before" + name);
+        return this.execute("before" + name);
     }
     this._after = function (name) {
-        return this.excute("after" + name);
+        return this.execute("after" + name);
     }
 }
 cb.model.ContainerModel.create = function (data, name, parent) {
@@ -4076,10 +4076,10 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
     push: function (options) {
         this._requests.push(options);
         if (!this._setTimeoutId) {
-            this._setTimeoutId = window.setTimeout(this.excute, 10);
+            this._setTimeoutId = window.setTimeout(this.execute, 10);
         }
     },
-    excute: function () {
+    execute: function () {
         var requestManager = cb.rest.AjaxRequestManager;
         for (var i = 0; i < requestManager._requests.length; i++) {
             requestManager.doRequest(requestManager._requests[i])
@@ -4620,18 +4620,18 @@ cb.loader.loadViewCallback = function(responseText,el,callback){
 				el.innerHTML = linkStr + application.innerHTML;
 			//history.pushState({},title,url);
 			//cb.cache.controls.clear();
-			this.excuteScript(scriptUrls,scriptText);
+			this.executeScript(scriptUrls,scriptText);
 		}
 		if(callback){
 			callback.call(el,responseText);
 		}
 };
-cb.loader.excuteScript = function(scriptUrls,scriptText){
+cb.loader.executeScript = function(scriptUrls,scriptText){
 	var cacheId="ScriptsLoaded_none";
 	if(scriptUrls && scriptUrls.length>0)
 		cacheId = this.loadScripts(scriptUrls);
 	if(scriptText && scriptText.length>0)
-		this.excuteInlineScriptText(scriptText.join("\r\n"), cacheId);
+		this.executeInlineScriptText(scriptText.join("\r\n"), cacheId);
 };
 cb.loader.loadScripts = function (scripts) {
     var cacheId = "ScriptsLoaded_" + Math.random();
@@ -4648,8 +4648,8 @@ cb.loader.loadScripts = function (scripts) {
 cb.loader.loadScript = function (url, callback, params) {
 	cb.rest.loadScript(url, callback, params);
 };
-cb.loader.excuteInlineScriptText = function (text, cacheId) {
-	cb.console.debug("excuteInlineScriptText start");
+cb.loader.executeInlineScriptText = function (text, cacheId) {
+	cb.console.debug("executeInlineScriptText start");
     var isAllScriptLoadCompleted = true;
     var scriptsLoad = cb.cache.get(cacheId) || [];
     var length = scriptsLoad.length;
@@ -4657,15 +4657,15 @@ cb.loader.excuteInlineScriptText = function (text, cacheId) {
         isAllScriptLoadCompleted = isAllScriptLoadCompleted && scriptsLoad[i];
     if (isAllScriptLoadCompleted) {
         cb.cache.set(cacheId, null);
-        cb.console.debug("excuteScript:" + text);
-        cb.excuteScript(text);
-        cb.console.debug("excuteScript end!");
+        cb.console.debug("executeScript:" + text);
+        cb.executeScript(text);
+        cb.console.debug("executeScript end!");
     }
     else {
-		cb.console.debug("excuteInlineScriptText delay ——外部js没有下载完");
-		setTimeout(cb.loader.excuteInlineScriptText, 100, text, cacheId);
+		cb.console.debug("executeInlineScriptText delay ——外部js没有下载完");
+		setTimeout(cb.loader.executeInlineScriptText, 100, text, cacheId);
     }
-	cb.console.debug("excuteInlineScriptText" + (isAllScriptLoadCompleted?"内部js代码执行完成！":"由于外部js没有下载完，所以延迟执行！"));
+	cb.console.debug("executeInlineScriptText" + (isAllScriptLoadCompleted?"内部js代码执行完成！":"由于外部js没有下载完，所以延迟执行！"));
 };
 cb.loader.hasScript = function (src) {
     if (!src || !src.trim())
@@ -4696,7 +4696,7 @@ cb.globalEval = function (data) {
         })(data);
     }
 };
-cb.excuteScript = function (text) {
+cb.executeScript = function (text) {
     try {
         cb.globalEval(text);
     } catch (ex) {

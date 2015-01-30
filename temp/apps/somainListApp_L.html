@@ -1,0 +1,206 @@
+﻿<html>
+<head>
+    <meta charset="utf-8">
+    <title>订单</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <link href="./pc/css/modal.css" rel="stylesheet" />
+    <link href="./pc/css/Cube.Form.css" rel="stylesheet" />
+    <link href="./pc/css/Cube.Control.css" rel="stylesheet" />
+    <link href="./pc/css/Cube.Tab.css" rel="stylesheet" />
+    <link href="./pc/css/Cube.ToolBar.css" rel="stylesheet" />
+    <link href="./pc/css/Cube.Icon.css" rel="stylesheet" />
+    <link href="./pc/css/SlickGridSource.css" rel="stylesheet" type="text/css" />
+    <link href="./pc/css/SlickGridWrapper.css" rel="stylesheet" type="text/css" />
+    <link href="./pc/css/TextBox.css" rel="stylesheet" type="text/css" />
+    <link href="./pc/css/NumberBox.css" rel="stylesheet" type="text/css" />
+    <link href="./pc/css/DateTimeBox.css" rel="stylesheet" type="text/css" />
+    <link href="./pc/css/CheckBox.css" rel="stylesheet" type="text/css" />
+    <link href="./pc/css/Refer.css" rel="Stylesheet" type="text/css" />
+</head>
+<body>
+	<div id="somainListView" data-title="订单" data-page="u8.somainListApp" data-viewmodel="somainListViewModel">
+        <div class="cube-main">
+            <div class="cube-main-content">
+                <div class="cube-content-page">
+                    <div class="ui-head-content">
+                        <div data-propertyname="queryScheme" data-controltype="TabContent">
+                            <div class="cube-bar-open-container"></div>
+                            <div class="cube-bar-close-container"></div>
+                        </div>
+                        <div class="ui-head-content ui-right">
+                            <div data-propertyname="addschemeAction" data-controltype="ImageButton">
+                                <span class="add-icon"></span>
+                                <span></span>
+                            </div>
+                            <div data-controltype="SearchBox">
+                                <input type="text" placeholder="单号/客户/联系人/物料" />
+                                <span></span>
+                            </div>
+                            <div data-propertyname="expandAction" data-controltype="ImageButton">
+                                <span>展开查询条件</span>
+                                <span class="oc-open-icon"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ui-query-content"></div>
+                    <div class="ui-form-content">
+                        <div>
+                            <div data-propertyname="leftToolbar" data-controltype="ToolBar" class="cube-bar-modeltxt">
+					                    <li>
+                                                <div data-propertyname="addAction" data-controltype="ImageButton" data-name="add">
+        <span class="add-icon"></span>
+        <span>增加</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="editAction" data-controltype="ImageButton" data-name="add">
+        <span class="add-icon"></span>
+        <span>编辑</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="deleteAction" data-controltype="ImageButton" data-name="add">
+        <span class="delete-icon"></span>
+        <span>删除</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="submitAction" data-controltype="ImageButton" data-name="workflow1">
+        <span class="submit-icon"></span>
+        <span>提交</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="withdrawAction" data-controltype="ImageButton" data-name="workflow1">
+        <span class="withdraw-icon"></span>
+        <span>收回</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="approveAction" data-controltype="ImageButton" data-name="workflow2">
+        <span class="approve-icon"></span>
+        <span>审核</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="unapproveAction" data-controltype="ImageButton" data-name="workflow2">
+        <span class="unapprove-icon"></span>
+        <span>弃审</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="closeAction" data-controltype="ImageButton" data-name="close">
+        <span class="close-icon"></span>
+        <span>终止</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="inventoryAction" data-controltype="ImageButton" data-name="business">
+        <span class="inventory-icon"></span>
+        <span>供货安排</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="deliveryAction" data-controltype="ImageButton" data-name="business">
+        <span class="delivery-icon"></span>
+        <span>发货</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="outboundAction" data-controltype="ImageButton" data-name="business">
+        <span class="outbound-icon"></span>
+        <span>出库</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="bizAction" data-controltype="ImageButton" data-name="biz">
+        <span class="biz-icon"></span>
+        <span>业务操作</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="printAction" data-controltype="ImageButton" data-name="device">
+        <span class="print-icon"></span>
+        <span>打印</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="outputAction" data-controltype="ImageButton" data-name="device">
+        <span class="output-icon"></span>
+        <span>输出</span>
+    </div>
+                                        </li>
+                            </div>
+                            <div data-propertyname="rightToolbar" data-controltype="ToolBar" class="cube-bar-modelicon">
+					                    <li>
+                                                <div data-propertyname="sortAction" data-controltype="ImageButton">
+        <span class="sort-icon"></span>
+        <span>排序</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="filterAction" data-controltype="ImageButton">
+        <span class="filter-icon"></span>
+        <span>过滤</span>
+    </div>
+                                        </li>
+					                    <li>
+                                                <div data-propertyname="setAction" data-controltype="ImageButton">
+        <span class="set-icon"></span>
+        <span>设置</span>
+    </div>
+                                        </li>
+                            </div>
+                        </div>
+					                <div class="grid-wrapper">
+        <div data-propertyname="somains" data-controltype="DataGrid2" class="grid"></div>
+        <div class="pager"></div>
+    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+    <script src="./jquery/jquery-1.11.1.js" type="text/javascript"></script>
+    <script src="./jquery/jquery-ui.js" type="text/javascript"></script>
+    <script src="./common/js/Animation.js" type="text/javascript"></script>
+    <script src="./common/js/Cube.js" type="text/javascript"></script>
+    <script src="./pc/js/modal.js" type="text/javascript""></script>
+    <script src="./pc/js/cube.pc.js" type="text/javascript"></script>
+    <script src="./common/js/Cube.bindings.js" type="text/javascript"></script>
+    <script src="./common/js/Control.js" type="text/javascript"></script>
+    <script src="./common/js/Button.js" type="text/javascript"></script>
+    <script src="./common/js/ImageButton.js" type="text/javascript"></script>
+    <script src="./common/js/ToolBar.js" type="text/javascript"></script>
+    <script src="./pc/js/TabContent.js" type="text/javascript"></script>
+    <script src="./common/js/TimeLine.js" type="text/javascript"></script>
+    <script src="./common/js/CommonProxy.js" type="text/javascript"></script>
+    <script src="./common/js/CommonCRUD.js" type="text/javascript"></script>
+	<script src="./jquery/jquery.event.drag-2.2.js" type="text/javascript"></script>
+	<script src="./pc/js/SlickGridSource.js" type="text/javascript"></script>
+	<script src="./pc/js/SlickGridWrapper.js" type="text/javascript"></script>
+	<script src="./common/js/TextBox.js" type="text/javascript"></script>
+	<script src="./common/js/NumberBox.js" type="text/javascript"></script>
+	<script src="./common/js/DateTimeBox.js" type="text/javascript"></script>
+	<script src="./common/js/CheckBox.js" type="text/javascript"></script>
+	<script src="./common/js/Refer.js" type="text/javascript"></script>
+	<script src="./common/js/ImageButton.js" type="text/javascript"></script>
+
+    <link href="./pc/css/Datagrid.css" rel="stylesheet" />
+    <link href="./pc/css/Pager.css" rel="stylesheet" />
+    <script src="./jquery/jquery.event.drag-2.2.js"></script>
+    <script src="./pc/js/GridVM.js" type="text/javascript"></script>
+    <script src="./pc/js/DataGrid.binding.js" type="text/javascript"></script>
+    <script src="./pc/js/DataGrid.js" type="text/javascript"></script>
+    <script src="./pc/js/DataGrid.Formatters.js" type="text/javascript"></script>
+    <script src="./pc/js/Pager.js" type="text/javascript"></script>
+
+    <script src="apps/u8/somainListApp_L.js" type="text/javascript"></script>
+	<script src="apps/u8/somainListApp_Extend.js" type="text/javascript"></script>
+    
+    
+	<script type="text/javascript">
+		cb.viewbinding.create("somainListView");
+	</script>
+</body>
+</html>

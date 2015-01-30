@@ -2,7 +2,7 @@
 $.extend(true, window, {
 	"cb": {
 		"controls": {
-			"DataGrid": DataGrid
+			"DataGrid2": DataGrid
 		}
 	}
 });
@@ -41,7 +41,7 @@ Column.prototype={
 	//sortStatus:0,//字段当前排序状态；值0、1、2分别表示未排序，递增排序，递减排序；这个信息在模型内部管理
 	autoWrap:false,//内容是否自动换行
 	//defaults~/
-	type:'String',//列数据类型，默认为字符串类型
+	type: 'String',//列数据类型，默认为字符串类型
 	//getName:function(){return this.[FIELDNAME_PROP];},//不提供这个方法了，直接使用this.[FIELDNAME_PROP]避免函数调用
 	//cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 	//colStyle:function(index){},
@@ -142,7 +142,7 @@ function DataGrid(el,options){
 	this.$el=$(el).first();
 	
 	//支持延时实例初始化
-	if(typeof options==='object'){
+	if (typeof options === 'object' && options.columns) {
 		this.init(options);
 	}
 }
@@ -291,9 +291,7 @@ DataGrid.prototype={
 	render:function(data){
 		var $el=this.$el;
 		$el.addClass('grid');
-		if(this.autoWrap){
-			this.setAutoWrap(true);
-		}
+		
 		this.$el.html('');
 		var view=$(DataGrid.TEMPLATE),
 			frozenCols=this._getTheaderHtml(true,true),
@@ -312,8 +310,11 @@ DataGrid.prototype={
 			//ele.innerHTML='<tr>'+frozenCols+otherCols+'</tr>';
 			$(ele).html('<tr>'+frozenCols+otherCols+'</tr>');
 		});
-		
+		if (this.autoWrap) {
+		    view.addClass('autoWrap');
+		}
 		$el.append(view);
+		
 		//记录初始滚动值
 		this._lastScrollTop=0;
 		this._lastScrollLeft=0;
@@ -369,15 +370,18 @@ DataGrid.prototype={
 			$(this).removeClass('active');
 			$('.view .refLine',dg.$el).hide();
 		}).on('dblclick',function(evt){
-			var view=dg.$el.children('.view');
-			view.addClass('autoLayout');
+		    var view = dg.$el.children('.view');
+
+		    if (this.autoWrap) view.removeClass('autoWrap');
+		    view.addClass('autoLayout');
 			var field=$(this).closest('td').data('field');
 			var width=0;
 			view.find('thead td[data-field='+field+']').each(function(i,td){
 				width=Math.max(width,$(td).width());
 			});
-			
+			if (this.autoWrap) view.addClass('autoWrap');
 			view.removeClass('autoLayout');
+			
 			$('.view .refLine',dg.$el).hide();
 			dg.setColWidth(field,width);
 		});
@@ -713,7 +717,8 @@ DataGrid.prototype={
 		
 		var arr=new Array(10);
 		var j=0;
-		arr[j++]='<td class="cell" style="width:';
+		arr[j++] = '<td class="cell';
+		arr[j++] = !col.visible ? ' hidden" style="width:' : '" style="width:';
 		arr[j++]=col.width;
 		arr[j++]='px;" data-field="';
 		arr[j++]=col[FIELDNAME_PROP];
@@ -760,9 +765,10 @@ DataGrid.prototype={
 		//return '<td >'+value+'</td>';
 		var contentHtml=col.getFormatter().call(col,value,dataContext);
 		var arr=new Array(30),j=0;
-		arr[j++]='<td class="cell';
+		arr[j++] = '<td class="cell';
 		arr[j++]=' '+col.getTextAlign();
-		arr[j++]=first?' first':'';
+		arr[j++] = first ? ' first' : '';
+		arr[j++] = !col.visible ? ' hidden' : '';
 		arr[j++]=col[FIELDNAME_PROP]!==this.frozenField?'':' frozen';
 		arr[j++]='">';
 		if(!left){
@@ -785,7 +791,7 @@ DataGrid.prototype={
 		return arr.join('');
 	},
 	setAutoWrap:function(wrap){
-		this.$el.toggleClass('autoWrap',this.autoWrap=!!wrap);
+		this.$el.children('.view').toggleClass('autoWrap',this.autoWrap=!!wrap);
 	},
 	//按指定字段集的排序规则排序
 	_sortBy:function(fields,noReflesh){

@@ -7,7 +7,7 @@ cb.model.DataState = {
 	Missing:undefined//数据不在本地,
 };
 //实例化时，要构建出模型的结构
-cb.model.Model3D = function (parent, name, data) {
+cb.model.GridVM = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
     this._listeners = [];
 	var defaults={
@@ -18,7 +18,7 @@ cb.model.Model3D = function (parent, name, data) {
 		mergeState:false,//合并显示设置
 		multiSort:true,
 		sortFields:[],
-		showCheckBox:true,	//是否显示checkbox列
+		showCheckBox: true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		//frozenField:undefined,
 		mode:'Remote',//默认数据源来自于远程 'Remote'/'Local'
@@ -48,10 +48,10 @@ cb.model.Model3D = function (parent, name, data) {
     this._editRowModel = null;
 
 	//分页请求返回后回调,context指定为this
-	this._pageServerCallBack=$.proxy(function(data){
-		if(data.success){
-			var data=data.success;
-			this._setPageRows(data.Rows);
+	this._pageServerCallBack=$.proxy(function(success,fail){
+		if(success){
+			var data=success;
+			this._setPageRows(data.currentPageData);
 			//请求数据是肯定指定了pageSize和pageIndex,所以无须再修改
 			//this._data.pageInfo.pageSize=data.pageSize;
 			//this._data.pageInfo.pageIndex=data.pageIndex;
@@ -60,7 +60,7 @@ cb.model.Model3D = function (parent, name, data) {
 			//通知分页条更新
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
 		}else{
-			alert(data.fail.message);
+			alert(fail.message);
 		}
 	},this);
 	
@@ -76,8 +76,8 @@ cb.model.Model3D = function (parent, name, data) {
 		delete this._data.sortFields;
 	}
 };
-cb.model.Model3D.prototype = new cb.model.BaseModel();
-cb.model.Model3D.prototype.getPkName = function () {
+cb.model.GridVM.prototype = new cb.model.BaseModel();
+cb.model.GridVM.prototype.getPkName = function () {
 	 var columns = this._getColumns()
 	 for (var col in columns) {
 		colData = columns[col];
@@ -88,11 +88,11 @@ cb.model.Model3D.prototype.getPkName = function () {
 	 }
 	 return "id";
 };
-cb.model.Model3D.prototype.getTsName = function(){
+cb.model.GridVM.prototype.getTsName = function(){
 	return "ts";
 };
 //支持数据对象，考虑跟set合并成一个方法 支持setData(Rows),支持setData({}),支持setData(propertyName,value)
-cb.model.Model3D.prototype.setData = function (data) {
+cb.model.GridVM.prototype.setData = function (data) {
     cb.console.log("Model3D.setData", this);
     if (arguments.length == 0)
         return;
@@ -135,7 +135,7 @@ cb.model.Model3D.prototype.setData = function (data) {
     cb.console.log("Model3D.setData", this);
 }
 
-cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyData) {
+cb.model.GridVM.prototype.getData = function (propertyName, onlyCollectDirtyData) {
     var pkName = this.getPkName();
     var tsName = this.getTsName();
     if (onlyCollectDirtyData && propertyName == "value") {
@@ -214,7 +214,7 @@ cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyDat
 }
 
 
-$.extend(cb.model.Model3D.prototype,{
+$.extend(cb.model.GridVM.prototype,{
 	//初始化行数据状态
 	_initRowState:function(){
 		var ds=this._getDataSource();
@@ -518,7 +518,7 @@ $.extend(cb.model.Model3D.prototype,{
 		var fields=this.getSortFields();
 		if(!fields.length)return rows;
 		var model3d=this,
-			Model3D=cb.model.Model3D;
+			Model3D=cb.model.GridVM;
 			columns=this._getColumns();
 		var fn=function(itemA, itemB){
 				var valA,valB;
@@ -702,17 +702,17 @@ $.extend(cb.model.Model3D.prototype,{
 			data.pageIndex=data.pageIndex||this.getPageIndex();
 			var pageServer=this._getPageServer();
 			
-			pageServer(data,$.proxy(function(response){
-				if(response.fail){
-					alert(response.fail.message);
+			pageServer(data,$.proxy(function(success,fail){
+				if(fail){
+					alert(fail.message);
 					return;
 				}
-				data=response.success;
+				data=success;
 				//更新datasource长度和内容
 				this._dataSource=new Array(data.totalCount);
 				this._rowsDataState=new Array(data.totalCount);
-				this._updateDataSource(data.Rows,data.pageIndex,data.pageSize);
-				this._pageServerCallBack(response);
+				this._updateDataSource(data.currentPageData, data.pageIndex, data.pageSize);
+				this._pageServerCallBack(success);
 				if(callback)callback();
 			},this));
 		}else{//data为datasource结构
@@ -1075,15 +1075,15 @@ $.extend(cb.model.Model3D.prototype,{
 		return this._data.Mode;
 	},
 	_before:function (eventName, args) {
-		return this.excute("before" + eventName, args);
+		return this.execute("before" + eventName, args);
 	},
 	_after:function (eventName, args) {
-		return this.excute("after" + eventName, args);
+		return this.execute("after" + eventName, args);
 	},
 	fireEvent:function (eventName, args) {
-		if (this.excute("before" + eventName, args)) {
-			this.excute(eventName, args);
-			this.excute("after" + eventName, args);
+		if (this.execute("before" + eventName, args)) {
+			this.execute(eventName, args);
+			this.execute("after" + eventName, args);
 		}
 	},
 	syncEditRowModel:function (rowIndex, cellName, propertyName, value) {
@@ -1171,7 +1171,7 @@ $.extend(cb.model.Model3D.prototype,{
 	}
 });
 //内置的排序方式
-cb.model.Model3D.comparators={
+cb.model.GridVM.comparators={
 	'Number':function(num1,num2){return num1-num2;},
 	'String':function(strA,strB){return strA>strB?1:(strA<strB?-1:0);},
 	'String.IgnoreCase':function(a,b){
@@ -1180,4 +1180,29 @@ cb.model.Model3D.comparators={
 		return strA>strB?1:(strA<strB?-1:0);
 	}
 };
-cb.model.Model3D.comparators['Boolean']=cb.model.Model3D.comparators['Number'];
+cb.model.GridVM.comparators['Boolean'] = cb.model.GridVM.comparators['Number'];
+//覆盖cb.clone错误的clone方法
+cb.clone = function clone(obj) {
+    //支持数组项内的扩展
+    var extend = function (post, back) {
+        if (!back || typeof back != 'object') return;
+        post = post || {};
+        var src, target;
+        //处理数组的扩展
+        if (back instanceof Array) {
+            post = post instanceof Array ? post : [];
+        }
+        for (var i in back) {
+            src = back[i];
+            target = post[i];
+            if (src && typeof src == 'object') {
+                if (typeof target != 'object') target = {};
+                post[i] = extend(target, src);
+            } else if (src != null) {
+                post[i] = src;
+            }
+        }
+        return post;
+    };
+    return extend({}, obj);
+};
