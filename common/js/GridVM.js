@@ -1075,15 +1075,15 @@ $.extend(cb.model.Model3D.prototype,{
 		return this._data.Mode;
 	},
 	_before:function (eventName, args) {
-		return this.excute("before" + eventName, args);
+		return this.execute("before" + eventName, args);
 	},
 	_after:function (eventName, args) {
-		return this.excute("after" + eventName, args);
+		return this.execute("after" + eventName, args);
 	},
 	fireEvent:function (eventName, args) {
-		if (this.excute("before" + eventName, args)) {
-			this.excute(eventName, args);
-			this.excute("after" + eventName, args);
+		if (this.execute("before" + eventName, args)) {
+			this.execute(eventName, args);
+			this.execute("after" + eventName, args);
 		}
 	},
 	syncEditRowModel:function (rowIndex, cellName, propertyName, value) {
@@ -1181,3 +1181,28 @@ cb.model.Model3D.comparators={
 	}
 };
 cb.model.Model3D.comparators['Boolean']=cb.model.Model3D.comparators['Number'];
+//覆盖cb.clone错误的clone方法
+cb.clone = function clone(obj) {
+    //支持数组项内的扩展
+    var extend = function (post, back) {
+        if (!back || typeof back != 'object') return;
+        post = post || {};
+        var src, target;
+        //处理数组的扩展
+        if (back instanceof Array) {
+            post = post instanceof Array ? post : [];
+        }
+        for (var i in back) {
+            src = back[i];
+            target = post[i];
+            if (src && typeof src == 'object') {
+                if (typeof target != 'object') target = {};
+                post[i] = extend(target, src);
+            } else if (src != null) {
+                post[i] = src;
+            }
+        }
+        return post;
+    };
+    return extend({}, obj);
+};

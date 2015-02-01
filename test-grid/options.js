@@ -12,7 +12,7 @@ var options={
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		multiSort:true,		//是否支持多列排序，默认true
-		//fieldNames:['duration','effortDriven','start','finish','percentComplete','title','number'],//说明字段排序
+		fieldNames:['duration','effortDriven','start','finish','percentComplete','title','number'],//说明字段排序
 		frozenField:'duration',	//冻结的列在列序列中的索引好（不考虑行号列和checkbox列）
 		mergeState:false,
 		/*remote /local，表示数据源直接来源，本地提供行数据还是远程提供行数据，如果是直接远程数据源，
@@ -28,7 +28,7 @@ var options={
 		pagination:true,//是否分页展示\\初始化后不能再修改
 		pager:'.pager1',
 		//所有列的定义(有序)
-		Columns:{
+		columns:{
 			
 			'title':{
 				type:'String',
@@ -143,6 +143,7 @@ function getTestData(count){
 	}
 	return data;
 }
+/*
 options.columns={
 	ts:{title:"时间戳",ctrlType:"DateTimeBox",alwaysReadOnly:true,visible:false,owner:"somain 订单主表"},
 	dr:{title:"删除标记",ctrlType:"CheckBox",alwaysReadOnly:true,visible:false,owner:"somain 订单主表"},
@@ -228,3 +229,4 @@ options.columns={
 	pk_so_somain_b_def4:{title:"自定义项4",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
 	pk_so_somain_b_def5:{title:"自定义项5",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"}
 };
+*/
