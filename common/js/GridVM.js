@@ -53,8 +53,8 @@ cb.model.Model3D = function (parent, name, data) {
 			var data=data.success;
 			this._setPageRows(data.Rows);
 			//请求数据是肯定指定了pageSize和pageIndex,所以无须再修改
-			//this._data.pageInfo.pageSize=data.pageSize;
-			//this._data.pageInfo.pageIndex=data.pageIndex;
+			this._data.pageInfo.pageSize=data.pageSize;
+			this._data.pageInfo.pageIndex=data.pageIndex;
 			this._data.pageInfo.totalCount=data.totalCount;
 			
 			//通知分页条更新

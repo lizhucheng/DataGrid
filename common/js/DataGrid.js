@@ -713,7 +713,8 @@ DataGrid.prototype={
 		
 		var arr=new Array(10);
 		var j=0;
-		arr[j++]='<td class="cell" style="width:';
+		arr[j++] = '<td class="cell';
+		arr[j++] = !col.visible ? ' hidden" style="width:' : '" style="width:';
 		arr[j++]=col.width;
 		arr[j++]='px;" data-field="';
 		arr[j++]=col[FIELDNAME_PROP];
@@ -763,6 +764,7 @@ DataGrid.prototype={
 		arr[j++]='<td class="cell';
 		arr[j++]=' '+col.getTextAlign();
 		arr[j++]=first?' first':'';
+		arr[j++] = !col.visible ? ' hidden' : '';
 		arr[j++]=col[FIELDNAME_PROP]!==this.frozenField?'':' frozen';
 		arr[j++]='">';
 		if(!left){
