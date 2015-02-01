@@ -136,10 +136,9 @@ function DataGrid(el,options){
 	//调用兼容处理
 	if(!(this instanceof DataGrid))return new DataGrid(el,options);
 	if(typeof el==='string'&& el.charAt(0)!='#'){el='#'+el;}
-	
-	
-		
+
 	this.$el=$(el).first();
+	this.$el.addClass('grid');
 	
 	//支持延时实例初始化
 	if(typeof options==='object'){
@@ -181,7 +180,7 @@ DataGrid.prototype={
 			this.cols.unshift(new Column(DataGrid.ROWNOCOL));	
 			frozenField=frozenField||DataGrid.ROWNOCOL[FIELDNAME_PROP];
 		}
-		
+		this.autoWrap=!!opts.autoWrap;
 		this._rebuildColMap();
 		//初始化固定列边界
 		//如果指定的列存在，则用指定的列作为边界，否则根据是否显示行序号列和checkbox选择相应的列作为固定边界。
@@ -290,10 +289,7 @@ DataGrid.prototype={
 	/*渲染整个表格控件，包括表头和表数据,表尾（注：分页以插件的形势存在，Grid可添加分页插件，为分页插件提供和model交互的接口，通过接口转发分页插件的命令）*/
 	render:function(data){
 		var $el=this.$el;
-		$el.addClass('grid');
-		if(this.autoWrap){
-			this.setAutoWrap(true);
-		}
+
 		this.$el.html('');
 		var view=$(DataGrid.TEMPLATE),
 			frozenCols=this._getTheaderHtml(true,true),
@@ -312,7 +308,9 @@ DataGrid.prototype={
 			//ele.innerHTML='<tr>'+frozenCols+otherCols+'</tr>';
 			$(ele).html('<tr>'+frozenCols+otherCols+'</tr>');
 		});
-		
+		if (this.autoWrap) {
+		    view.addClass('autoWrap');
+		}
 		$el.append(view);
 		//记录初始滚动值
 		this._lastScrollTop=0;
@@ -369,15 +367,18 @@ DataGrid.prototype={
 			$(this).removeClass('active');
 			$('.view .refLine',dg.$el).hide();
 		}).on('dblclick',function(evt){
-			var view=dg.$el.children('.view');
-			view.addClass('autoLayout');
+			var view = dg.$el.children('.view');
+
+		    if (dg.autoWrap) view.removeClass('autoWrap');
+		    view.addClass('autoLayout');
 			var field=$(this).closest('td').data('field');
 			var width=0;
 			view.find('thead td[data-field='+field+']').each(function(i,td){
 				width=Math.max(width,$(td).width());
 			});
-			
+			if (dg.autoWrap) view.addClass('autoWrap');
 			view.removeClass('autoLayout');
+			
 			$('.view .refLine',dg.$el).hide();
 			dg.setColWidth(field,width);
 		});
@@ -787,7 +788,7 @@ DataGrid.prototype={
 		return arr.join('');
 	},
 	setAutoWrap:function(wrap){
-		this.$el.toggleClass('autoWrap',this.autoWrap=!!wrap);
+		this.$el.children('.view').toggleClass('autoWrap',this.autoWrap=!!wrap);
 	},
 	//按指定字段集的排序规则排序
 	_sortBy:function(fields,noReflesh){

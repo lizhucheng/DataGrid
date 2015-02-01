@@ -174,7 +174,7 @@
 	overflow:hidden;
 	text-overflow:ellipsis;
 }
-.grid.autoWrap   .viewBody  tbody  .cellContent{
+.grid  .autoWrap   .viewBody  tbody  .cellContent{
 	overflow:visible;
 	white-space:normal;
 	word-wrap:break-word;
