@@ -89,8 +89,8 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		control.loadData(rows);
 		//每次重新加载数据后要重新同步选中状态，及焦点状态
 		var model=this.getModel();
-		control.select(model.getPageSelectedIndex());
-		control.setFocusedRow(model.getFocusedRow());
+		control.select(model.getPageSelectedIndexs());
+		control.setFocusedRow(model.getFocusedIndex());
 	};
 	//合并状态修改后，处理显示
 	this._set_mergeInfo=function(control,args){
@@ -99,8 +99,8 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		}else{
 			control.loadData(args.rows);
 			var model=this.getModel();
-			control.select(model.getPageSelectedIndex());
-			control.setFocusedRow(model.getFocusedRow());
+			control.select(model.getPageSelectedIndexs());
+			control.setFocusedRow(model.getFocusedIndex());
 		}
 	};
 	//处理model的行选择事件,焦点管理
@@ -125,12 +125,12 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		control.unselectAll();
 	};
 	
-	this._set_focusedRow=function(control,rowIndex){
+	this._set_focusedIndex=function(control,rowIndex){
 		control.setFocusedRow(rowIndex);
 	};
 	//选中状态是否已经同步（内部辅组方法）
 	this._isSelectedSyc=function(){
-		return cb.isEqual(this.getControl().getSelectedRows(),this.getModel().getPageSelectedIndex());
+		return cb.isEqual(this.getControl().getSelectedRows(),this.getModel().getPageSelectedIndexs());
 	};
 	//处理控件触发的行选择和焦点改变事件
 	this._onSelect=function(rowIndexs){
@@ -159,7 +159,7 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	};
 	this._onFocusChange=function(index){
 		var model = this.getModel();
-		model.setFocusedRow(index);
+		model.setFocusedIndex(index);
 	};
 	//
 	this._set_pageInfo=function(control,pageInfo){

@@ -55,10 +55,13 @@ cb.model.Model3D = function (parent, name, data) {
 		if(data.success){
 			var data=data.success;
 			if(this._dataSource.length!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
-			this._setPageRows(data.currentPageData);
-			//请求数据是肯定指定了pageSize和pageIndex,所以无须再修改
-			this._data.pageSize=data.pageSize;
-			this._data.pageIndex=data.pageIndex;
+			if(data._pageStart==undefined){
+				var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
+				data._pageStart=pageInfo.pageStart;
+				data._dsStart=pageInfo.dsStart;
+			}
+			this._updateDataSource(data.currentPageData,data._dsStart,data._pageStart);
+			this._setPageRows(this._getCurrentPageRows());
 			
 			//通知分页条更新
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this.getPageInfo()));
@@ -657,16 +660,18 @@ $.extend(cb.model.Model3D.prototype,{
 	
 	
 	//更新显示的数据行
-	_refreshDisplayRows:function(){
+	_refreshDisplay:function(){
 		var pageRows=this._getCurrentPageRows();
 		if(pageRows){
 			this._setPageRows(pageRows);
+			//通知分页条更新
+			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this.getPageInfo()));
 		}else{//数据不全在本地
 			var pageServer=this._getPageServer();
-			var params=$.extend({},this._queryParams,{
-				pageIndex:this.getPageIndex(),
-				pageSize:this.getPageSize()
-			});
+			var params=$.extend({},this._queryParams);
+			var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
+			params.pageSize=pageInfo.pageSize;
+			params.pageIndex=pageInfo.pageIndex;
 			pageServer(params,this._pageServerCallBack);
 			
 		}
@@ -702,13 +707,14 @@ $.extend(cb.model.Model3D.prototype,{
 				//更新datasource长度和内容
 				this._dataSource=new Array(data.totalCount);
 				this._rowsDataState=new Array(data.totalCount);
-				this._updateDataSource(data.currentPageData,data.pageIndex,data.pageSize);
-				this._pageServerCallBack({success:data});
+			
+				this._pageServerCallBack({success:data,pageStart:0,dsStart:0});
 				if(callback)callback();
 			}else{//自动请求一页数据
 				var params=$.extend({},queryParams);
 				params.pageSize=this.getPageSize();
 				params.pageIndex=this.getPageIndex();
+				//把本地分页信息转换为远程分页参数
 				
 				pageServer(params,$.proxy(function(response){
 					if(response.fail){
@@ -716,51 +722,136 @@ $.extend(cb.model.Model3D.prototype,{
 						return;
 					}
 					var data=response.success;
+					
 					//更新datasource长度和内容
 					this._dataSource=new Array(data.totalCount);
 					this._rowsDataState=new Array(data.totalCount);
-					this._updateDataSource(data.currentPageData,data.pageIndex,data.pageSize);
+					var remotePageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
+					data._dsStart=remotePageInfo.dsStart;
+					data._pageStart=remotePageInfo.pageStart;
+
 					this._pageServerCallBack(response);
 					if(callback)callback();
 				},this));
 			}
 		}else{//data为datasource结构
 			this._dataSource=cb.isArray(data)?data:[];
-			this._refreshDisplayRows();
+			this._refreshDisplay();
 			if(callback)callback();
 		}
 	},
 	_getDataSource:function(){return this._dataSource;},
 
 	//数据库查询的数据到后更新数据源
-	_updateDataSource:function(rows,pageIndex,pageSize){
+	_updateDataSource:function(rows,dsStart,pageStart){
 		//暂时简单处理，把数据放到指定位置，不考虑客户端的已有修改
 		var ds=this._getDataSource();
 		var rowsDataState=this._rowsDataState;
-		var dataState=cb.model.Unchanged;
-		for(var i=pageIndex*pageSize,count=Math.min(pageSize,rows.length);count--;i++){
-			ds[i]=rows[i];
-			rowsDataState[i]=dataState;
+		var Unchanged=cb.model.DataState.Unchanged,
+			Missing=cb.model.DataState.Missing,
+			Add=cb.model.DataState.Add;
+		//如果数据之前为加载，则把数据更新到对应位置
+		for(var i=pageStart,indexInDs=dsStart,len=rows.length;i<len;){
+			var rowState=rowsDataState[indexInDs];
+			while(rowState==Add){//跳过用户编辑过程中添加的行
+				indexInDs++;
+			}
+			if(rowState==Missing){
+				ds[indexInDs]=rows[i];
+				rowsDataState[indexInDs]=Unchanged;
+			}
+			i++;
+			indexInDs++;
 		}
 	},
-
+	/*
+	由于分页在用户视角下是相对于本地数据源的，当grid可以编辑时，在编辑过程的一个时间点，数据源中数据可能既有由于编辑中添加的，也有还为同步到本地的，同步到
+	本地的数据可能有被删除的，这时候翻页操作时，可能没有对应的页的完整数据（可能只有部分），这时需要去服务器请求在服务器中的数据，但此时要请求的数据并不一定是
+	远程数据源中的同一页数据，需要根据本地数据源和远程数据源的映射关系，计算出应该请求哪一页数据，请求的页大小按当前客户端的页大小时，请求的数据不一定能完全填充
+	缺失的数据。这时需要适当的调大pageSize，然后从返回的远程数据中截取需要的部分数据。
+	*/
+	//@return {pageIndex:pageIndex,pageSize:pageSize,dsStart:dsStart,pageStart:pageStart}
+	_getRemotePageInfo:function(pageSize,pageIndex){
+		var indexInfo=this._getIndexInDs(pageSize*pageIndex);
+		var rowDataState=this._rowsDataState;
+		var count=0,needCount;
+		var Missing=cb.model.DataState.Missing;
+		var Delete=cb.model.DataState.Delete;
+		var indexInds=indexInfo.indexInDs;
+		var i=indexInfo;
+		while(rowDataState[i]!==Missing){
+			if(rowDataState[i]!==Delete)count++;
+			i++;
+		}
+		needCount=Math.max(0,pageSize-count);//需要请求的记录数
+		var pageIndexInRemote,pageSizeInRemote;
+		var startIndexInRemote=indexInfo.remoteRowCountBefore;
+		var pageCountBefore=Math.ceil((startIndexInRemote+1)/needCount)+1;//看要请求的第一条记录在第几页中
+		if((startIndexInRemote+1)%needCount)pageCountBefore--;
+		//要请求的第一条数据在返回页中的索引
+		var indexInResponse;
+		if((pageCountBefore-1)%2===0){//如果要请求的第一条记录在基数页中，则pageIndex指向这条记录所在页的前一页
+			pageSizeInRemote=2*needCount;
+			pageIndexInRemote=(pageCountBefore-1)/2;
+			indexInResponse=startIndexInRemote%pageSizeInRemote;
+		}else if((pageCountBefore-1)%3===0){//在偶数页中，且前面有3的整数倍页，则pagesise设为当前页的3倍
+			pageSizeInRemote=3*needCount;
+			pageIndexInRemote=(pageCountBefore-1)/3;
+			indexInResponse=startIndexInRemote%pageSizeInRemote;
+		}else{
+			pageSizeInRemote=2*needCount;
+			pageIndexInRemote=pageCountBefore/2-1;
+			indexInResponse=startIndexInRemote%pageSizeInRemote;
+		}
+		return {
+			pageIndex:pageIndexInRemote,
+			pageSize:pageSizeInRemote,
+			pageStart:indexInResponse,
+			dsStart:indexInds
+		};
+		
+	},
 	//尝试获取当前页数据，如果当前页数据不全,返回null
 	_getCurrentPageRows:function(){
 		var rows=[];
 		var ds=this._getDataSource();
-		var dataState=cb.model.DataState.Missing;
+		var Missing=cb.model.DataState.Missing;
+		var Delete=cb.model.DataState.Delete;
 		var pageIndex=this._data.pageIndex,
 			pageSize=this._data.pageSize,
-			i=pageSize*pageIndex,
-			end=pageSize!==-1?Math.min(pageSize*(pageIndex+1),ds.length):ds.length;//如果pageSize=-1,说明未分页，使用整页数据
-		for(;i<end;i++){
-			if(this._rowsDataState[i]!=dataState){
-				rows.push(ds[i]);
-			}else{
-				return null;
+			i=this._getIndexInDs(pageSize*pageIndex).indexInDs,
+			count=pageSize;
+		for(var len=ds.length;i<len&&count>0;i++){
+			if(this._rowsDataState[i]!==Delete){//如果这条数据被来自于远程的数据在编辑过程中被删除了，则已经不再本地数据源中了
+				if(this._rowsDataState[i]!=Missing){
+					rows.push(ds[i]);
+					count--;
+				}else{
+					return null;
+				}
 			}
 		}
 		return rows;
+	},
+	//获取用户视角下数据索引对应的数据在本地datasource中的index,顺便统计ds中对应的位置之前有多少远程数据
+	_getIndexInDs:function(index){
+		var rowDataState=this._rowsDataState;
+		var num=index+1;//序数
+		var count=0,remoteRowCountBefore=0;
+		var Delete=cb.model.DataState.Delete,
+			Add=cb.model.DataState.Add;
+		for(var i=-1,len=rowDataState.length;i<len&&count<num;){
+			i++;
+			if(rowDataState[i]!==Delete)count++;
+		}
+		var indexInDs=i;
+		for(var i=0,len=rowDataState.length;i<indexInDs;i++){
+			if(rowDataState[i]!==Add)remoteRowCountBefore++;
+		}
+		return {
+				indexInDs:indexInDs,
+				remoteRowCountBefore:remoteRowCountBefore//本地ds中index对应位置前的远程数据的数量
+			};
 	},
 	//处理分页
 	getPageInfo:function(){
@@ -776,7 +867,7 @@ $.extend(cb.model.Model3D.prototype,{
 		pageSize=Math.max(-1,pageSize);
 		this._data.pageSize = pageSize;
 		this._data.pageIndex=0;
-		if(!_inner){this._refreshDisplayRows();}
+		if(!_inner){this._refreshDisplay();}
 	},
 	getPageSize:function () {
 		return this._data.pageSize;
@@ -785,7 +876,7 @@ $.extend(cb.model.Model3D.prototype,{
 		var pageCount=this.getPageCount();
 		if(index>=0&&index<pageCount){
 			this._data.pageIndex=index;
-			if(!_inner){this._refreshDisplayRows();}
+			if(!_inner){this._refreshDisplay();}
 		}
 	},
 	getTotalCount:function(){
@@ -836,41 +927,47 @@ $.extend(cb.model.Model3D.prototype,{
 		this._after("commitRows", rowIndexes);
 	},
 
+	//焦点行，选中行操作、管理(通过索引操作，应用开发人员不能直接操作model总的行数据，只能通过api操作，获取的行数据为数据副本)
+	
 	getRow:function (rowIndex) {
-		return this._data.rows[rowIndex];
-	},
-	getRowIndex:function (row) {
-		return this._data.rows.indexOf(row);
+		return cb.clone(this._data.rows[rowIndex]);
 	},
 	//焦点管理
-	setFocusedRow:function (index) {
+	setFocusedIndex:function (index) {
 		var rows=this._data.rows;
 		if(index<0||index>=rows.length){
 			this._focusedRowIndex = -1;
-			this.getEditRowModel().clear();
+			//this.getEditRowModel().clear();
 			return;
 		}
 		if (this._focusedRowIndex == index)
 			return;
 
-		if (!this._before("setFocusedRow", index))
+		if (!this._before("setFocusedIndex", index))
 			return;
 
 		var oldValue = this._focusedRowIndex;
 		this._focusedRowIndex = index;
 
-		this.setEditRowModel(this._focusedRowIndex);
+		//this.setEditRowModel(this._focusedRowIndex);
 
-		var args = new cb.model.PropertyChangeArgs(this._name, "focusedRow", index, oldValue);
+		var args = new cb.model.PropertyChangeArgs(this._name, "focusedIndex", index, oldValue);
 		this.PropertyChange(args);
 
-		this._after("setFocusedRow", index);
+		this._after("setFocusedIndex", index);
 	},
-	getFocusedRow:function () {
+	//获取焦点行的索引
+	getFocusedIndex:function () {
 		return this._focusedRowIndex;
 	},
+	//获取焦点行对应的记录数据
+	getFocusedRow:function () {
+		return cb.clone(this._data.rows[this._focusedRowIndex]);
+	},
+	
 	//#region 选择、全选支持
-	select:function (rows) {
+	select:function (rowIndexs) {
+		var rows=rowIndexs;
 		this._before("select", this);
 		if (!cb.isArray(rows)) rows = [rows];
 		cb.each(rows, function (index) {
@@ -879,10 +976,11 @@ $.extend(cb.model.Model3D.prototype,{
 		}, this);
 		//由于下面还有使用rows，所以不能直接把rows作为参数传到外部，对象参数可能被修改
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "select", cb.clone(rows)));
-		rows.length >= 1 ? this.setFocusedRow(rows[0]) : this.setFocusedRow(-1);//使第一个参数对应的行获取焦点
+		rows.length >= 1 ? this.setFocusedIndex(rows[0]) : this.setFocusedIndex(-1);//使第一个参数对应的行获取焦点
 		this._after("select", this);
 	},
-	unselect:function (rows) {
+	unselect:function (rowIndexs) {
+		var rows=rowIndexs;
 		if(this._before("unselect", this)===false)return;
 		if (!cb.isArray(rows)) rows = [rows];	
 		
@@ -907,22 +1005,31 @@ $.extend(cb.model.Model3D.prototype,{
 	//支持多页选中
 	getSelectedRows:function () {
 		var selectedRows = [];
-		var rows=this._data.dataSource;
+		var rows=this._dataSource;
 		for (var i = 0, length = rows.length; i < length; i++) {
-			if (rows[i].isSelected) {
-				selectedRows.push(rows[i]);
+			if (rows[i]&&rows[i].isSelected) {//可能还有远程数据
+				selectedRows.push(cb.clone(rows[i]));
 			}
 		}
 		return selectedRows;
 	},
-	//获取当前显示的行数据中选中的行,
-	getPageSelectedIndex:function () {
+	//获取当前显示的行数据中选中的行的索引,
+	getPageSelectedIndexs:function () {
 		var selectedRows = [];
 		var rows=this._data.rows;
 		for (var i = 0, length = rows.length; i < length; i++) {
 			if (rows[i].isSelected) {
 				selectedRows.push(i);
 			}
+		}
+		return selectedRows;
+	},
+	//获取当前页选中的记录数据
+	getPageSelectedRows:function(){
+		var selectedIndexs=this.getPageSelectedIndexs();
+		var selectedRows=[];
+		for(var i=0,len=selectedIndexs.length;i<len;i++){
+			selectedRows.push(this.getRow(selectedIndexs[i]));
 		}
 		return selectedRows;
 	},
