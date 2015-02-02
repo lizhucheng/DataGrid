@@ -61,7 +61,7 @@ cb.model.Model3D = function (parent, name, data) {
 			this._data.pageIndex=data.pageIndex;
 			
 			//通知分页条更新
-			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
+			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this.getPageInfo()));
 		}else{
 			alert(data.fail.message);
 		}
@@ -746,7 +746,6 @@ $.extend(cb.model.Model3D.prototype,{
 
 	//尝试获取当前页数据，如果当前页数据不全,返回null
 	_getCurrentPageRows:function(){
-		if(!this.get('pagination'))return [].concat(this._getDataSource());
 		var rows=[];
 		var ds=this._getDataSource();
 		var dataState=cb.model.DataState.Missing;
@@ -762,6 +761,14 @@ $.extend(cb.model.Model3D.prototype,{
 			}
 		}
 		return rows;
+	},
+	//处理分页
+	getPageInfo:function(){
+		return {
+			pageIndex:this.getPageIndex(),
+			pageSize:this.getPageSize(),
+			totalCount:this.getTotalCount()
+		};
 	},
 	setPageSize:function (pageSize,_inner) {//指定为内部调用时，仅仅更新内部状态，不刷新视图,加'_'前缀的参数只在内部可用
 		if (typeof pageSize !== 'number') {return;}
@@ -781,12 +788,15 @@ $.extend(cb.model.Model3D.prototype,{
 			if(!_inner){this._refreshDisplayRows();}
 		}
 	},
+	getTotalCount:function(){
+		return this._getDataSource().length;
+	},
 	gotoPage:this.setPageIndex,
 	getPageIndex:function(){
 		return this._data.pageIndex;
 	},
 	getPageCount:function(){
-		return this._data.pageSize!=-1?this._dataSource.length/this._data.pageSize:+!!this._dataSource.length;
+		return this._data.pageSize!=-1?Math.ceil(this._dataSource.length/this._data.pageSize):+!!this._dataSource.length;
 	},
 	showNextPage:function(){
 		var index=this.getPageIndex()+1;
@@ -1040,36 +1050,6 @@ $.extend(cb.model.Model3D.prototype,{
 		return rowState != null || rowState != cb.model.DataState.Unchanged;
 	},
 
-	onChangePage:function (pageSize, pageIndex) {
-
-		var cache = this._data.Cache;
-		if (cache) {
-			var pageCount = this._data.PageInfo.pageCount;
-			var totalCount = this._data.PageInfo.totalCount;
-			var tempPageCount = totalCount / pageSize;
-			if (tempPageCount !== parseInt(tempPageCount)) tempPageCount = parseInt(tempPageCount) + 1;
-			if (pageCount !== tempPageCount) this._data.PageInfo.pageCount = pageCount = tempPageCount;
-			if (pageSize == this._data.PageInfo.pageSize) {
-
-				var start = pageIndex * pageSize - pageSize;
-				var end = pageIndex * pageSize;
-				var rows = [];
-				for (var i = start; i < end; i++) {
-					if (cache[i])
-						rows.push(cache[i]);
-				}
-				if (rows.length == pageSize) {
-					this.setPageRows({ pageSize: pageSize, pageIndex: pageIndex, pageCount: pageCount, totalCount: totalCount, currentPageData: rows }, false);
-					return;
-				}
-			}
-			else {
-				this._data.Cache = {};
-			}
-		}
-
-		this.fireEvent("changePage", { pageSize: pageSize, pageIndex: pageIndex });
-	},
 	setGridDataMode:function (mode) {
 		this._data.Mode = mode;
 	},

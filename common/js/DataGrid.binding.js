@@ -285,10 +285,11 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         }
         model.addListener(this);
 		//
-		if(model._pagination&& model._data.pager){
+		if(model._data.pager){
 			var viewModelEl=this.getControl().$el.closest('[data-viewmodel='+model._parent.getModelName()+']');
 			var pager=new cb.controls['Pager']($(model._data.pager,viewModelEl),model);
-			pager.update(model._data.pageInfo);
+			
+			pager.update(model.getPageInfo());
 			this._pager=pager;
 		}
     };
