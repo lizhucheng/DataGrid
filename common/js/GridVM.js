@@ -51,9 +51,9 @@ cb.model.Model3D = function (parent, name, data) {
 	//this._currentTotalCount=undefined;
 	
 	//分页请求返回后回调,context指定为this
-	this._pageServerCallBack=$.proxy(function(data){
-		if(data.success){
-			var data=data.success;
+	this._pageServerCallBack=$.proxy(function(success,fail){
+		if(success){
+			var data=success;
 			if(this._dataSource.length!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
 			if(data._pageStart==undefined){
 				var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
@@ -66,7 +66,7 @@ cb.model.Model3D = function (parent, name, data) {
 			//通知分页条更新
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this.getPageInfo()));
 		}else{
-			alert(data.fail.message);
+			alert(fail.message);
 		}
 	},this);
 	
@@ -671,7 +671,7 @@ $.extend(cb.model.Model3D.prototype,{
 			var params=$.extend({},this._queryParams);
 			var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
 			params.pageSize=pageInfo.pageSize;
-			params.pageIndex=pageInfo.pageIndex;
+			params.pageIndex=pageInfo.pageIndex+1;
 			pageServer(params,this._pageServerCallBack);
 			
 		}
@@ -707,21 +707,23 @@ $.extend(cb.model.Model3D.prototype,{
 				//更新datasource长度和内容
 				this._dataSource=new Array(data.totalCount);
 				this._rowsDataState=new Array(data.totalCount);
+				pageData._pageStart=0;
+				pageData._dsStart=0;
 			
-				this._pageServerCallBack({success:data,pageStart:0,dsStart:0});
+				this._pageServerCallBack(data);
 				if(callback)callback();
 			}else{//自动请求一页数据
 				var params=$.extend({},queryParams);
 				params.pageSize=this.getPageSize();
-				params.pageIndex=this.getPageIndex();
+				params.pageIndex=this.getPageIndex()+1;//服务器pageIndex从1开始
 				//把本地分页信息转换为远程分页参数
 				
-				pageServer(params,$.proxy(function(response){
-					if(response.fail){
-						alert(response.fail.message);
+				pageServer(params,$.proxy(function(success,fail){
+					if(fail){
+						alert(fail.message);
 						return;
 					}
-					var data=response.success;
+					var data=success;
 					
 					//更新datasource长度和内容
 					this._dataSource=new Array(data.totalCount);
@@ -730,7 +732,7 @@ $.extend(cb.model.Model3D.prototype,{
 					data._dsStart=remotePageInfo.dsStart;
 					data._pageStart=remotePageInfo.pageStart;
 
-					this._pageServerCallBack(response);
+					this._pageServerCallBack(data);
 					if(callback)callback();
 				},this));
 			}

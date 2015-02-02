@@ -84,7 +84,7 @@ var options={
 //模拟的服务端
 function pageQuery(pageInfo,callback){
 	var pageSize=pageInfo.pageSize,
-		pageIndex=pageInfo.pageIndex;
+		pageIndex=pageInfo.pageIndex-1;
 	var total=1125;
 	//var datasource=getTestData(total);
 	var datasource=response.data.success.currentPageData;
@@ -102,7 +102,7 @@ function pageQuery(pageInfo,callback){
 	
 	//处理回调
 	if(callback){
-		callback({success:data});
+		callback(data);
 	}
 }
 
