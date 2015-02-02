@@ -20,12 +20,10 @@ var options={
 		*/
 		mode:'remote',
 		//第一个元素表示用于请求数据的方法，第二个元素表示查询前用于收集查询参数的方法，每次请求
-		pageServer:{'query':pageQuery},
-		pageInfo:{
-			pageSize:50,
-			pageIndex:0
-		},
-		pagination:true,//是否分页展示\\初始化后不能再修改
+		//pageServer:{'query':pageQuery},
+		pageSize:50,
+		pageIndex:0,
+
 		pager:'.pager1',
 		//所有列的定义(有序)
 		/*
@@ -97,7 +95,7 @@ function pageQuery(pageInfo,callback){
 		rows.push(datasource[i]);
 	}
 	var data={};
-	data.Rows=rows;
+	data.currentPageData=rows;
 	data.totalCount=datasource.length;
 	data.pageSize=pageSize;
 	data.pageIndex=pageIndex;
@@ -146,7 +144,7 @@ function getTestData(count){
 	return data;
 }
 
-options.columns={
+var columns={
 	ts:{title:"时间戳",ctrlType:"DateTimeBox",alwaysReadOnly:true,visible:false,owner:"somain 订单主表"},
 	dr:{title:"删除标记",ctrlType:"CheckBox",alwaysReadOnly:true,visible:false,owner:"somain 订单主表"},
 	pk_so_somain:{title:"订单主表pk",length:20,nullable:false,ctrlType:"TextBox",key:true,visible:false,owner:"somain 订单主表"},

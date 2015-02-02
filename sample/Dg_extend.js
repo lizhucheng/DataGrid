@@ -11,6 +11,7 @@ var DgViewModel_Extend = {
     },
 	init_extend:function(viewModel){
 		var gridModel = viewModel.getproduct();
-		gridModel.setDataSource();
+		gridModel.setColumns(columns);
+		gridModel.setDataSource(pageQuery,{param1:11,param2:'name'});
 	}
 };

@@ -23,8 +23,8 @@ cb.model.Model3D = function (parent, name, data) {
 		//frozenField:undefined,
 		mode:'Remote',//默认数据源来自于远程 'Remote'/'Local'
 		//pageServer: '',//远程数据须指定对应的数据服务
-		pagination:true,
-		pageInfo:{pageSize:50,pageIndex:0},//默认显示第一页，每页50条数据
+		pageSize:50,//-1表示不分页
+		pageIndex:0,
 		pager:'.pager'//默认分页条视图为viewmodel下的 .pager元素,
 		
 	};
@@ -46,16 +46,19 @@ cb.model.Model3D = function (parent, name, data) {
 	//当前获取焦点的行在Rows索引位置，只有Rows中的行才能设置为聚焦行
     this._focusedRowIndex =-1;
     this._editRowModel = null;
-
+	
+	//数据记录总数量（如果分页信息返回的总数量和当前值不一致，说明远程数据源有修改，提示保存刷新后再操作）
+	//this._currentTotalCount=undefined;
+	
 	//分页请求返回后回调,context指定为this
 	this._pageServerCallBack=$.proxy(function(data){
 		if(data.success){
 			var data=data.success;
-			this._setPageRows(data.Rows);
+			if(this._dataSource.length!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
+			this._setPageRows(data.currentPageData);
 			//请求数据是肯定指定了pageSize和pageIndex,所以无须再修改
-			this._data.pageInfo.pageSize=data.pageSize;
-			this._data.pageInfo.pageIndex=data.pageIndex;
-			this._data.pageInfo.totalCount=data.totalCount;
+			this._data.pageSize=data.pageSize;
+			this._data.pageIndex=data.pageIndex;
 			
 			//通知分页条更新
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this._data.pageInfo));
@@ -64,8 +67,6 @@ cb.model.Model3D = function (parent, name, data) {
 		}
 	},this);
 	
-	
-	this._pagination=this._data.pagination||false;//属性实例化后就不可变,实例化后，提供一次设置pagination属性的机会
 
 	//this._countAdded=0;//记录客户端添加的行的数量
 	
@@ -638,8 +639,9 @@ $.extend(cb.model.Model3D.prototype,{
 		if (!this._before("setColumns", columns))
 			return;
 		//columns = cb.isArray(columns) ? columns : [columns];
-		this._data.Columns = columns;
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "Columns", columns));
+		this._data.columns = columns;
+	
+		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "columns", cb.clone(this._data)));
 		this._after("setColumns", columns);
 	},
 
@@ -662,30 +664,22 @@ $.extend(cb.model.Model3D.prototype,{
 			this._setPageRows(pageRows);
 		}else{//数据不全在本地
 			var pageServer=this._getPageServer();
-			var data={
+			var params=$.extend({},this._queryParams,{
 				pageIndex:this.getPageIndex(),
 				pageSize:this.getPageSize()
-			};
-			pageServer(data,this._pageServerCallBack);
+			});
+			pageServer(params,this._pageServerCallBack);
 			
 		}
 	},
-
+	_getPageServer:function(){
+		return this._pageServer;
+	},
 	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
 	_isRemote:function(){
 		return this.get('mode').toLowerCase()==='remote';
 	},
-	//设置分页查询代理，设置后，本地的数据清空
-	setPageServer:function(pageServer){
-		if(!this._isRemote)throw('custom exception:unsupported!');
-		this._data.pageServer=pageServer;
-		this._data.dataSource=[];
-		this._refreshDisplayRows();
-	},
-	_getPageServer:function(){
-		if(!this._isRemote()||!this._data.pageServer)throw('custom exception:no pageServer');
-		return this._data.pageServer.query||this._data.pageServer;
-	},
+
 	//rows为对应的页数据，根据model的设置（页过滤规则，排序规则），得到页面展示的数据
 	_setPageRows:function(rows){
 		this._data.rows=this._sort(this._filter(rows));
@@ -694,27 +688,43 @@ $.extend(cb.model.Model3D.prototype,{
 	},
 	
 	//初始化ds（初始化datasource后要更新rowsInView）
-	setDataSource:function(data,callback){
+	//使用本地数据时，调用setDataSource时传递的参数为一个记录数组；
+	//设置远程数据源时，参数为：请求数据的查询方法，查询参数，也可以传递一个可选的单页数据对象{currentPageData:[],pageIndex:pageIndex,pageSize:pageSize,totalCount:pageSize}
+	//如果没提供单页数据时，自动请求一页数据
+	setDataSource:function(pageServer,queryParams,pageData,callback){
 		if(this._isRemote()){
-			//data中包含pageSize和pageIndex信息
-			data=data||{};
-			data.pageSize=data.pageSize||this.getPageSize();
-			data.pageIndex=data.pageIndex||this.getPageIndex();
-			var pageServer=this._getPageServer();
 			
-			pageServer(data,$.proxy(function(response){
-				if(response.fail){
-					alert(response.fail.message);
-					return;
-				}
-				data=response.success;
+			queryParams=queryParams||{};
+			this._pageServer=pageServer;
+			this._queryParams=queryParams;
+
+			if(pageData){//有一页数据了，就不自动请求
+				var data=pageData;
 				//更新datasource长度和内容
 				this._dataSource=new Array(data.totalCount);
 				this._rowsDataState=new Array(data.totalCount);
-				this._updateDataSource(data.Rows,data.pageIndex,data.pageSize);
-				this._pageServerCallBack(response);
+				this._updateDataSource(data.currentPageData,data.pageIndex,data.pageSize);
+				this._pageServerCallBack({success:data});
 				if(callback)callback();
-			},this));
+			}else{//自动请求一页数据
+				var params=$.extend({},queryParams);
+				params.pageSize=this.getPageSize();
+				params.pageIndex=this.getPageIndex();
+				
+				pageServer(params,$.proxy(function(response){
+					if(response.fail){
+						alert(response.fail.message);
+						return;
+					}
+					var data=response.success;
+					//更新datasource长度和内容
+					this._dataSource=new Array(data.totalCount);
+					this._rowsDataState=new Array(data.totalCount);
+					this._updateDataSource(data.currentPageData,data.pageIndex,data.pageSize);
+					this._pageServerCallBack(response);
+					if(callback)callback();
+				},this));
+			}
 		}else{//data为datasource结构
 			this._dataSource=cb.isArray(data)?data:[];
 			this._refreshDisplayRows();
@@ -734,19 +744,17 @@ $.extend(cb.model.Model3D.prototype,{
 			rowsDataState[i]=dataState;
 		}
 	},
-	_setTotalCount:function(totalCount){
-		this._data.pageInfo.totalCount=totalCount||0;
-	},
+
 	//尝试获取当前页数据，如果当前页数据不全,返回null
 	_getCurrentPageRows:function(){
 		if(!this.get('pagination'))return [].concat(this._getDataSource());
 		var rows=[];
 		var ds=this._getDataSource();
 		var dataState=cb.model.DataState.Missing;
-		var pageIndex=this._data.pageInfo.pageIndex,
-			pageSize=this._data.pageInfo.pageSize,
+		var pageIndex=this._data.pageIndex,
+			pageSize=this._data.pageSize,
 			i=pageSize*pageIndex,
-			end=Math.min(pageSize*(pageIndex+1),ds.length);
+			end=pageSize!==-1?Math.min(pageSize*(pageIndex+1),ds.length):ds.length;//如果pageSize=-1,说明未分页，使用整页数据
 		for(;i<end;i++){
 			if(this._rowsDataState[i]!=dataState){
 				rows.push(ds[i]);
@@ -757,34 +765,29 @@ $.extend(cb.model.Model3D.prototype,{
 		return rows;
 	},
 	setPageSize:function (pageSize,_inner) {//指定为内部调用时，仅仅更新内部状态，不刷新视图,加'_'前缀的参数只在内部可用
-		if(!this._pagination)throw('custom exception:unsupported!');
-		if (pageSize == null) {
-			return;
-		}
-		this._data.pageInfo.pageSize = pageSize;
-		this._data.pageInfo.pageIndex=0;
+		if (typeof pageSize !== 'number') {return;}
+		
+		pageSize=Math.max(-1,pageSize);
+		this._data.pageSize = pageSize;
+		this._data.pageIndex=0;
 		if(!_inner){this._refreshDisplayRows();}
 	},
 	getPageSize:function () {
-		if(!this._pagination)throw('custom exception:unsupported!');
-		return this._data.pageInfo.pageSize;
+		return this._data.pageSize;
 	},
 	setPageIndex:function(index,_inner){
-		if(!this._pagination)throw('custom exception:unsupported!');
 		var pageCount=this.getPageCount();
 		if(index>=0&&index<pageCount){
-			this._data.pageInfo.pageIndex=index;
+			this._data.pageIndex=index;
 			if(!_inner){this._refreshDisplayRows();}
 		}
 	},
 	gotoPage:this.setPageIndex,
 	getPageIndex:function(){
-		if(!this._pagination)throw('custom exception:unsupported!');
-		return this._data.pageInfo.pageIndex;
+		return this._data.pageIndex;
 	},
 	getPageCount:function(){
-		if(!this._pagination)throw('custom exception:unsupported!');
-		return Math.ceil(this._data.pageInfo.totalCount/this._data.pageInfo.pageSize);
+		return Math.ceil(this._dataSource.length/(this._data.pageSize!=-1?this._data.pageSize:Number.POSITIVE_INFINITY));
 	},
 	showNextPage:function(){
 		var index=this.getPageIndex()+1;
