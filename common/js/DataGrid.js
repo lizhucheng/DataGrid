@@ -825,19 +825,17 @@ DataGrid.prototype={
 	setData:function(data){
 		//数据适配
 		var options=$.extend({},data);		
-		delete options.Rows;
-		delete options.fieldNames;
-		delete options.columns;
-		//options.rows=data.Rows;
 		var fields=[];
 		
 		var fieldName,fieldInfo;
+		
 		for(var i=0,len=data.fieldNames.length;i<len;i++){
 			fieldName=data.fieldNames[i];
 			fieldInfo={};
 			fieldInfo[FIELDNAME_PROP]=fieldName;
 			fields.push($.extend(fieldInfo,data.columns[fieldName]));
 		}
+		
 		options.fields=fields;
 		//console.log(JSON.stringify(options,null,4));
 		this.init(options);

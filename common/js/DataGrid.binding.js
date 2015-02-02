@@ -171,7 +171,7 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		}
 	},
 	this._set_columns=function(control,data){
-		control.init(data);
+		control.setData(data);
 	};
 	this._onCellChange = function (rowIndex, cellName, cellValue) {
         var model = this.getModel();

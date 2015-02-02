@@ -228,7 +228,6 @@ $.extend(cb.model.Model3D.prototype,{
 		return this._data.columns;
 	},
 	_getFieldNames:function(){
-		if(this._data.fieldNames)return this._data.fieldNames;
 		var fieldNames=[],
 			cols=this._getColumns();
 		for(var prop in cols){
@@ -635,12 +634,12 @@ $.extend(cb.model.Model3D.prototype,{
 	},
 
 
-	setColumns:function (columns) {
+	setColumns:function (columns,fieldNames) {
 		if (!this._before("setColumns", columns))
 			return;
 		//columns = cb.isArray(columns) ? columns : [columns];
 		this._data.columns = columns;
-	
+		this._data.fieldNames=fieldNames||this._getFieldNames();
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "columns", cb.clone(this._data)));
 		this._after("setColumns", columns);
 	},
@@ -787,7 +786,7 @@ $.extend(cb.model.Model3D.prototype,{
 		return this._data.pageIndex;
 	},
 	getPageCount:function(){
-		return Math.ceil(this._dataSource.length/(this._data.pageSize!=-1?this._data.pageSize:Number.POSITIVE_INFINITY));
+		return this._data.pageSize!=-1?this._dataSource.length/this._data.pageSize:+!!this._dataSource.length;
 	},
 	showNextPage:function(){
 		var index=this.getPageIndex()+1;
