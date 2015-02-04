@@ -8,7 +8,7 @@
 var options={
 		//表是否可编辑（grid本质上只只读的展示数据，编辑功能也不过是提供编辑途径，在编辑后刷新显示）
 		//在编辑态时会响应一些交互事件，而浏览态时往往不会
-		editable:false,	
+		//editable:false,	
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		multiSort:true,		//是否支持多列排序，默认true

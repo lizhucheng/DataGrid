@@ -13,9 +13,11 @@ cb.model.Model3D = function (parent, name, data) {
 	var defaults={
 		columns:{},
 		ds:[],
-		readOnly:true,//只读状态下可以浏览，但不能进行增删改操作
-		autoWrap:true,//自动换行设置
-		mergeState:false,//合并显示设置
+		editable:true,
+		editMode:'Cell',	//编辑模式:行编辑，单元格编辑
+		//readOnly:true,	//等价于editable属性
+		autoWrap:true,	//自动换行设置
+		mergeState:false,	//合并显示设置
 		multiSort:true,
 		sortFields:[],
 		showCheckBox:true,	//是否显示checkbox列
@@ -75,7 +77,7 @@ cb.model.Model3D = function (parent, name, data) {
 	
 	
 	//非只读模式下关闭一些不能用的功能
-	if(!this._data.readOnly){
+	if(!this._data.editable){
 		delete this._data.mergeState;
 		delete this._data.sortFields;
 	}
@@ -260,7 +262,7 @@ $.extend(cb.model.Model3D.prototype,{
 			if (rowIndex < 0) {
 				//如果传入rowIndex==null and 列名cellName==null，则返回整体状态。
 				//如果传入rowIndex==null and 列名cellName!=null，则列状态。
-				return cellName ? this._data.Columns[cellName][propertyName] : this._data[propertyName];
+				return cellName ? this._data.columns[cellName][propertyName] : this._data[propertyName];
 			}
 			else {
 				//如果传入rowIndex!=null and 列名cellName!=null，则返回单元格状态。
@@ -329,22 +331,22 @@ $.extend(cb.model.Model3D.prototype,{
 			}
 			//设置列状态
 			else if (rowIndex < 0 && cellName) {
-				var oldValue = this._data.Columns[cellName][propertyName];
+				var oldValue = this._data.columns[cellName][propertyName];
 				if (oldValue === value)
 					return false;
 
-				var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue, columns: cb.clone(this._data.Columns) };
+				var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue, columns: cb.clone(this._data.columns) };
 				if (!this._before("ColumnStateChange", data))
 					return false;
 				
 				
-				this._data.Columns[cellName] = this._data.Columns[cellName] || {};//这样可能会增加新列
-				this._data.Columns[cellName][propertyName] = value;
+				this._data.columns[cellName] = this._data.columns[cellName] || {};//这样可能会增加新列
+				this._data.columns[cellName][propertyName] = value;
 
 				var args = new cb.model.PropertyChangeArgs(this._name, "ColumnStateChange", data);
 				this.PropertyChange(args);
 
-				this._after("ColumnStateChange", context);
+				this._after("ColumnStateChange", data);
 			}
 			//设置行状态
 			else if (rowIndex >= 0 && !cellName) {

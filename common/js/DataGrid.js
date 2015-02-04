@@ -19,6 +19,22 @@ DataGrid.SortStatus={'ASC':'asc','DESC':'desc','NONE':''};
 //定义存储列标识的属性名称
 var FIELDNAME_PROP='$name';
 
+//控件类型和数值类型适配
+var ctrlValTypeMap={
+	'CheckBox':'Boolean',
+	'TextBox':'String',
+	'DateTimeBox':'Date',
+	'NumberBox':'Number',
+	'Ref':'String'
+	
+};
+var ctrlFormatterMap={
+	'CheckBox':'CheckboxFormatter',
+	'TextBox':'defaultFormatter',
+	'DateTimeBox':'DateTimeFormatter',
+	'NumberBox':'NumberFormatter',
+	'Ref':'ReferFormatter'
+};
 //定义Column类型是为了管理列的默认值
 function Column(config,name){	
 	$.extend(true,this,config);
@@ -37,7 +53,7 @@ Column.prototype={
 	sortable:true,
 	annexable:true,//列数据是否可合并，有时候同列的数据表示的意义不同，列内不支持合并（例如不同币种下的数值，此时合并会破坏数据意义）
 	order:'none',// 'asc','desc'
-	formatter:'defaultFormatter',
+	//formatter:'',
 	//sortStatus:0,//字段当前排序状态；值0、1、2分别表示未排序，递增排序，递减排序；这个信息在模型内部管理
 	autoWrap:false,//内容是否自动换行
 	//defaults~/
@@ -46,8 +62,10 @@ Column.prototype={
 	//cssCls:'',	//列层次的样式定义（通过指定class与css中定义的样式关联）
 	//colStyle:function(index){},
 	//onclick:function(){}
+	/*如果自定义了格式化方法就用自定义的格式化函数格式化，如果通过名字指定了一个内置的格式格式化方法，
+	则用对应的内置格式化方法，如果没有使用列数值类型默认的格式化方法，最后使用平凡的格式化方法*/
 	getFormatter:function(){
-		return typeof this.formatter==='function'?this.formatter:DataGrid.Formatters[''+this.formatter]||DataGrid.Formatters['defaultFormatter'];
+		return typeof this.formatter==='function'?this.formatter:DataGrid.formatters[this.formatter||ctrlFormatterMap[this.ctrlType]]||DataGrid.formatters['defaultFormatter'];
 	},
 	//获取当前列的列对齐方式
 	getTextAlign:function(){
@@ -58,13 +76,19 @@ Column.prototype={
 		};
 		var textAlign=this.textAlign.toLowerCase();
 		if(!this.hasOwnProperty('textAlign')||!textAlign||!alignClsMap[textAlign]){//如果列没定义对齐方式，或定义的对齐方式无效，则根据类型使用类型默认的对齐方式
-			switch(this.type.toLowerCase()){
-				case 'number':textAlign='right';break;
-				case 'boolean':textAlign='center';break;
+			switch(ctrlValTypeMap[this.ctrlType]){
+				case 'Number':textAlign='right';break;
+				case 'Boolean':textAlign='center';break;
 				default:textAlign='left';break;
 			}
 		}
 		return textAlign==='right'||textAlign==='center'?alignClsMap[textAlign]:'';//默认居左,不设置className
+	},
+	isEditable:function(){
+		return !(this.alwaysReadOnly||this.readOnly);
+	},
+	getField:function(){
+		return this[FIELDNAME_PROP];
 	}
 };
 
@@ -464,7 +488,8 @@ DataGrid.prototype={
 			
 			//如果点击后变为列排序状态变为不排序，则不从model刷新视图
 			dg._sortBy(sortFields,nextStatus==='none'?true:false);
-		})
+		});
+		
 		
 		//复选框事件处理
 		if(this.showCheckBox){
@@ -495,6 +520,17 @@ DataGrid.prototype={
 					index=rows.indexOf(row);
 				dg.setFocusedRow(index);
 			});
+		//点击单元格
+		$('.viewBody .field',this.$el).on('click',function(evt){
+			if(dg.editable){
+				var field=$(this).data('field');
+				var col=dg.getColumn(field);
+				if(!col.isEditable())return;
+				
+				var rowIndex=$td.parent().index()-1;//不计算表头行
+				dg.execute('cellEditing',{rowIndex:rowIndex,field:field});
+			}
+		});
 	},
 	_fixScroll:function(evt){
 		var view=this.$el.children('.view');
@@ -760,14 +796,15 @@ DataGrid.prototype={
 	},
 	_getTdCellOuterHtml:function(col,value,dataContext,left,first){
 		//return '<td >'+value+'</td>';
+		//todo:后续需支持具体到单元格的格式化，这时候fomatter信息有行数据指定。
 		var contentHtml=col.getFormatter().call(col,value,dataContext);
 		var arr=new Array(30),j=0;
-		arr[j++]='<td class="cell';
+		arr[j++]='<td class="cell field';
 		arr[j++]=' '+col.getTextAlign();
 		arr[j++]=first?' first':'';
 		arr[j++] = !col.visible ? ' hidden' : '';
 		arr[j++]=col[FIELDNAME_PROP]!==this.frozenField?'':' frozen';
-		arr[j++]='">';
+		arr[j++]='" data-field="'+col[FIELDNAME_PROP]+'">';//每个数据容器记录field信息，方便定位数据对应的字段
 		if(!left){
 			arr[j++]='<div class="cellContent">';
 			arr[j++]=contentHtml;	

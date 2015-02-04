@@ -12,6 +12,8 @@ var DgViewModel_Extend = {
 	init_extend:function(viewModel){
 		var gridModel = viewModel.getproduct();
 		gridModel.setColumns(columns);
+		gridModel.setColumnState('itaxrate','formatter','PercentFormatter');
+		gridModel.setColumnState('itaxrate','textAlign','right');
 		gridModel.setPageSize(5);
 		gridModel.setDataSource(pageQuery,{param1:11,param2:'name'});
 	}
