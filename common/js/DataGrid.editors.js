@@ -1,6 +1,15 @@
 ﻿
 (function ($) {
 var DataGrid=cb.controls['DataGrid'];
+DataGrid.editors={
+	'DefaultEditor':Editor,
+	'CheckboxEditor':CheckboxEditor,
+	'TextBoxEditor':TextBoxEditor,
+	'NumberBox':NumberBoxEditor,
+	'DateTimeEditor':DateTimeEditor,
+	'ComboxEditor':ComboxEditor,
+	'ReferEditor':ReferEditor
+};
 var Editor={
 	init: function(container, options){
 		if(!this.el){
@@ -57,7 +66,7 @@ var ComboxEditor=$.extend({},Editor,{
 
 });
 
-var NumberBox=$.extend({},Editor,{
+var NumberBoxEditor=$.extend({},Editor,{
 
 });
 var DateTimeEditor=$.extend({},Editor,{

@@ -173,6 +173,19 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	this._set_columns=function(control,data){
 		control.setData(data);
 	};
+	
+	///////////编辑功能相关
+	
+	this._onCellEditing=function(data){
+		this.getModel()._onCellEditing(data);
+	};
+	this._set_cellEditing=function(control,data){
+		control._setCellEditing(data);
+	};
+
+	this._set_registerEditor=function(control,data){
+		control.registerEditor(data.name,data.def);
+	};
 	this._onCellChange = function (rowIndex, cellName, cellValue) {
         var model = this.getModel();
         if (!model) return;
@@ -218,11 +231,6 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         return this._editRowModelContainerBinding;
     };
 
-    this._onChangePage = function (pageSize, pageIndex) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.onChangePage) model.onChangePage(pageSize, pageIndex);
-    };
 
     this._onActiveRowClick = function (args) {
         var model = this.getModel();
@@ -262,7 +270,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.un("focusChange", this._onFocusChange);
             control.on("focusChange", this._onFocusChange, this);
 			
+			control.un("cellEditing", this._onCellEditing);
+			control.on("cellEditing", this._onCellEditing, this);
 			//
+			cellEditing
 			control.un("onCellChange", this._onCellChange);
             control.on("onCellChange", this._onCellChange, this);
 			
@@ -276,8 +287,7 @@ cb.binding.DataGridBinding = function (mapping, parent) {
             control.on("onCellEditorLoad", this._onCellEditorLoad, this);
             control.un("onCellEditorDestroy", this._onCellEditorDestroy);
             control.on("onCellEditorDestroy", this._onCellEditorDestroy, this);
-            control.un("onChangePage", this._onChangePage);
-            control.on("onChangePage", this._onChangePage, this);
+
             control.un("onActiveRowClick", this._onActiveRowClick);
             control.on("onActiveRowClick", this._onActiveRowClick, this);
             control.un("onQuerySchemeChanged", this._onQuerySchemeChanged);

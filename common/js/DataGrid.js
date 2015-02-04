@@ -25,6 +25,7 @@ var ctrlValTypeMap={
 	'TextBox':'String',
 	'DateTimeBox':'Date',
 	'NumberBox':'Number',
+	'ComboBox':'String',
 	'Ref':'String'
 	
 };
@@ -33,6 +34,16 @@ var ctrlFormatterMap={
 	'TextBox':'defaultFormatter',
 	'DateTimeBox':'DateTimeFormatter',
 	'NumberBox':'NumberFormatter',
+	'ComboBox':'defaultFormatter',
+	'Ref':'ReferFormatter'
+};
+//控件类型对应的默认编辑器
+var ctrlEditorMap={
+	'CheckBox':'CheckboxEditor',
+	'TextBox':'TextBoxEditor',
+	'DateTimeBox':'DateTimeFormatter',
+	'NumberBox':'NumberBoxEditor',
+	'ComboBox':'ComboxEditor',
 	'Ref':'ReferFormatter'
 };
 //定义Column类型是为了管理列的默认值
@@ -40,6 +51,9 @@ function Column(config,name){
 	$.extend(true,this,config);
 	this[FIELDNAME_PROP]=name||config[FIELDNAME_PROP];
 	this.title=this.title||this[FIELDNAME_PROP];
+	if(this.ctrlType==='ComboBox'&&this.dataSource){
+		//生成实例默认的格式化方法
+	}
 }
 Column.prototype={
 	constructor:Column,
@@ -1031,6 +1045,39 @@ DataGrid.prototype={
 	//判断是否选中了所有展示的行
 	_isAllChecked:function(){
 		return this.getSelectedRows().length===this._getRows().length;
+	},
+	//
+	_setCellEditing:function(field,rowIndex,dataContext){
+		var col=this.getColumn(field);
+		var container=this._getEditorContainer(field,rowIndex);
+		var editorContructor=this._getEditor(field,dataContext);
+		editorContructor.init(container,);
+	},
+	getEditor:function(config,dataContext){
+		if(typeof config!=='object'){
+			this._getEditorByName(config);
+		}else{
+			var ctrlType=config.ctrlType;
+			
+		}
+	},
+	//注册grid实例用的编辑器(不能注册同内置编辑器同名的编辑器，否则会被覆盖)
+	registerEditor:function(name,def){
+		this._editors=this._editors||{};
+		$.extend(this._editors[name],DataGrid.editors['DefaultEditor'],def);
+	},
+	//获取编辑器，如果grid实例中有定义则用实例自己的编辑器，否则到内置的公用编辑器中查询，如果还是未找到名称对应的编辑器，则返回默认编辑器。
+	_getEditorByName:function(name){
+		if(!name)name='';
+		return this._editors[name]||DataGrid.editors[name]||DataGrid.editors['DefaultEditor'];
+	},
+	_getEditorContainer:function(field,rowIndex){
+		var row=this._getRow(rowIndex);
+		var container=$(row).find('[data-field='+field+']');
+		return container[0];
+	},
+	_getRow:function(index){
+		return this.$el.find('.viewBody table')[0].rows[index+1];//不计算表头行
 	},
 	
 	
