@@ -18,7 +18,7 @@ DataGrid.SortStatus={'ASC':'asc','DESC':'desc','NONE':''};
 
 //定义存储列标识的属性名称
 var FIELDNAME_PROP='$name';
-
+DataGrid.FIELDNAME_PROP=FIELDNAME_PROP;
 //控件类型和数值类型适配
 var ctrlValTypeMap={
 	'CheckBox':'Boolean',
@@ -26,7 +26,7 @@ var ctrlValTypeMap={
 	'DateTimeBox':'Date',
 	'NumberBox':'Number',
 	'ComboBox':'String',
-	'Ref':'String'
+	'Refer':'String'
 	
 };
 var ctrlFormatterMap={
@@ -35,7 +35,7 @@ var ctrlFormatterMap={
 	'DateTimeBox':'DateTimeFormatter',
 	'NumberBox':'NumberFormatter',
 	'ComboBox':'defaultFormatter',
-	'Ref':'ReferFormatter'
+	'Refer':'ReferFormatter'
 };
 //控件类型对应的默认编辑器
 var ctrlEditorMap={
@@ -44,7 +44,7 @@ var ctrlEditorMap={
 	'DateTimeBox':'DateTimeFormatter',
 	'NumberBox':'NumberBoxEditor',
 	'ComboBox':'ComboxEditor',
-	'Ref':'ReferFormatter'
+	'Refer':'ReferFormatter'
 };
 //定义Column类型是为了管理列的默认值
 function Column(config,name){	
@@ -53,6 +53,14 @@ function Column(config,name){
 	this.title=this.title||this[FIELDNAME_PROP];
 	if(this.ctrlType==='ComboBox'&&this.dataSource){
 		//生成实例默认的格式化方法
+		this.formatter=function(ds){
+			return function(value){
+				for(var i=0,len=ds.length;i<len;i++){
+					if(ds[i].value==value){return ds[i].text;}//2=='2'
+				}
+				return value;
+			};
+		}(this.dataSource);
 	}
 }
 Column.prototype={
@@ -535,13 +543,13 @@ DataGrid.prototype={
 				dg.setFocusedRow(index);
 			});
 		//点击单元格
-		$('.viewBody .field',this.$el).on('click',function(evt){
+		this.$el.on('click','.viewBody .field',function(evt){
 			if(dg.editable){
 				var field=$(this).data('field');
 				var col=dg.getColumn(field);
 				if(!col.isEditable())return;
 				
-				var rowIndex=$td.parent().index()-1;//不计算表头行
+				var rowIndex=$(this.parentNode).index();
 				dg.execute('cellEditing',{rowIndex:rowIndex,field:field});
 			}
 		});
@@ -1049,17 +1057,24 @@ DataGrid.prototype={
 	//
 	_setCellEditing:function(field,rowIndex,dataContext){
 		var col=this.getColumn(field);
-		var container=this._getEditorContainer(field,rowIndex);
-		var editorContructor=this._getEditor(field,dataContext);
-		editorContructor.init(container,);
+		var container=$(this._getEditorContainer(field,rowIndex));
+		var editorContructor=this._getEditor(col,dataContext);
+		container.children('.cellContent').css('visibility','hidden');
+		editorContructor.init(container.children('.cellBorder')[0]);
+		//隐藏内容
+		
+		
 	},
-	getEditor:function(config,dataContext){
-		if(typeof config!=='object'){
-			this._getEditorByName(config);
-		}else{
+	//支持获取具名的编辑器（具名的编辑器包括Grid内置的编辑器和用户通过registerEditor方法注册的自定义编辑器）
+	_getEditor:function(config,dataContext){
+		var name;
+		if(typeof config==='object'){
 			var ctrlType=config.ctrlType;
-			
+			name=ctrlEditorMap[ctrlType];
+		}else{
+			name=config;
 		}
+		return this._getEditorByName(name);
 	},
 	//注册grid实例用的编辑器(不能注册同内置编辑器同名的编辑器，否则会被覆盖)
 	registerEditor:function(name,def){
@@ -1069,7 +1084,7 @@ DataGrid.prototype={
 	//获取编辑器，如果grid实例中有定义则用实例自己的编辑器，否则到内置的公用编辑器中查询，如果还是未找到名称对应的编辑器，则返回默认编辑器。
 	_getEditorByName:function(name){
 		if(!name)name='';
-		return this._editors[name]||DataGrid.editors[name]||DataGrid.editors['DefaultEditor'];
+		return this._editors&&this._editors[name]||DataGrid.editors[name]||DataGrid.editors['DefaultEditor'];
 	},
 	_getEditorContainer:function(field,rowIndex){
 		var row=this._getRow(rowIndex);

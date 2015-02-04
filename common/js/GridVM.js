@@ -1039,17 +1039,20 @@ $.extend(cb.model.Model3D.prototype,{
 	},
 	//#endregion
 	
+	registerEditor:function(name,def){
+		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "registerEditor", {name:def}));
+	},
 	//编辑相关
 	_onCellEditing:function(data){//data中包含行位置索引和列名
-		var rowIndex=data.rowIndex,
+		var index=data.rowIndex,
 			field=data.field;
-		var row=this.getRow(rowIndex);
-		var evtArg={row:row,field:field,rowIndex:rowIndex}
-		if (!this._before("CellEditing",evtArg))return;
-		this.setFocusedIndex(rowIndex);
+		var record=this.getRow(index);
+		var evtArg={record:record,field:field,index:index}
+		//if (!this._before("CellEditing",evtArg))return;
+		this.setFocusedIndex(index);
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "cellEditing", evtArg));	
-		this._after("CellEditing",evtArg);
-	}
+	
+	},
 	//新增空行
 	addNewRow:function () {
 		if (!this._before("addNewRow"))//beforeadd

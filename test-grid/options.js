@@ -1,4 +1,4 @@
-﻿console._debug=true;
+console._debug=true;
 
 //DataGrid实例内部维护控件状态信息以及单页数据（datasource）,model内部维护需要的状态信息并负责和服务器交互，
 //控件中的数据根据定义的映射约定和model中的row数据关联
@@ -190,7 +190,7 @@ var columns={
 	def2:{title:"自定义项2",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
 	def3:{title:"自定义项3",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
 	def4:{title:"自定义项4",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
-	def5:{title:"自定义项5",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
+	def5:{title:"自定义项5",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"}/*,
 	pk_so_somain_b_ts:{title:"时间戳",ctrlType:"DateTimeBox",alwaysReadOnly:true,visible:false,owner:"somain 订单主表"},
 	pk_so_somain_b_dr:{title:"删除标记",ctrlType:"CheckBox",alwaysReadOnly:true,owner:"somain 订单主表"},
 	pk_so_somain_b_pk_so_sodetails:{title:"订单表体pk",length:20,nullable:false,ctrlType:"TextBox",key:true,visible:false,owner:"somain 订单主表"},
@@ -227,7 +227,7 @@ var columns={
 	pk_so_somain_b_def2:{title:"自定义项2",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
 	pk_so_somain_b_def3:{title:"自定义项3",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
 	pk_so_somain_b_def4:{title:"自定义项4",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
-	pk_so_somain_b_def5:{title:"自定义项5",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"}
+	pk_so_somain_b_def5:{title:"自定义项5",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"}*/
 };
 
 var response=
@@ -244,6 +244,7 @@ var response=
           "billmaker": "1001A410000000000005",
           "billno": "SOS12015010600000050",
           "btax": false,
+		  'idispstate':'0',
           "creationtime": "2015-01-06 14:20:54",
           "creator": "1001A410000000000005",
           "dr": 0,

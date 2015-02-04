@@ -180,7 +180,7 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		this.getModel()._onCellEditing(data);
 	};
 	this._set_cellEditing=function(control,data){
-		control._setCellEditing(data);
+		control._setCellEditing(data.field,data.index,data.record);
 	};
 
 	this._set_registerEditor=function(control,data){
@@ -273,7 +273,6 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.un("cellEditing", this._onCellEditing);
 			control.on("cellEditing", this._onCellEditing, this);
 			//
-			cellEditing
 			control.un("onCellChange", this._onCellChange);
             control.on("onCellChange", this._onCellChange, this);
 			

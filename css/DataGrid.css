@@ -249,3 +249,25 @@
 .grid .textAlignLeft{text-align:left;}
 .grid .textAlignRight{text-align:right;}
 .grid .textAlignCenter{text-align:center;}
+
+/*参照列样式*/
+.grid  .referData{
+	text-decoration:underline;
+	cursor:pointer;
+	color:#00f;
+}
+
+/*内置编辑器样式*/
+.grid  table.cellEdtior{
+	width:100%;
+	height:100%;
+	table-layout:fixed;
+	border-collapse:collapse;
+}
+.grid  table.cellEdtior td{
+	padding:2px;
+}
+.grid .TextBoxEditor  input{
+	width:100%;
+	box-sizing:border-box;
+}
