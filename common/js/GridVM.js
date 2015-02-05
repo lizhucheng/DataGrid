@@ -14,7 +14,7 @@ cb.model.Model3D = function (parent, name, data) {
 		columns:{},
 		ds:[],
 		editable:true,
-		editMode:'Cell',	//编辑模式:行编辑，单元格编辑
+		editMode:'CellEditor',	//编辑模式:行编辑，单元格编辑
 		//readOnly:true,	//等价于editable属性
 		autoWrap:true,	//自动换行设置
 		mergeState:false,	//合并显示设置
@@ -297,7 +297,7 @@ $.extend(cb.model.Model3D.prototype,{
 				return;
 
 			var data = { rowIndex: rowIndex, cellName: cellName, value: value, oldValue: oldValue };
-			if (!this._before("CellValueChange", data))
+			if (!this._before("fieldValueChange", data))
 				return false;
 			if (cellIsObject)
 				cell.value = value;
@@ -305,10 +305,10 @@ $.extend(cb.model.Model3D.prototype,{
 				row[cellName] = value;
 			row.state = cb.model.DataState.Update;
 
-			var args = new cb.model.PropertyChangeArgs(this._name, "CellValueChange", data);
+			var args = new cb.model.PropertyChangeArgs(this._name, "fieldValueChange", data);
 			this.PropertyChange(args);
 
-			this._after("CellValueChange", data); //值变化出发,无焦点要求
+			this._after("fieldValueChange", data); //值变化出发,无焦点要求
 		}
 		else {
 			//设置控件状态
@@ -318,7 +318,7 @@ $.extend(cb.model.Model3D.prototype,{
 					return false;
 
 				var data = { propertyName: propertyName, value: value, oldValue: oldValue };
-				if (!this._before("StateChange", data))
+				if (!this._before("stateChange", data))
 					return false;
 
 				this._data[propertyName] = value;
@@ -326,7 +326,7 @@ $.extend(cb.model.Model3D.prototype,{
 				var args = new cb.model.PropertyChangeArgs(this._name, propertyName, value,oldValue);
 				this.PropertyChange(args);
 
-				this._after("StateChange", data);
+				this._after("stateChange", data);
 
 			}
 			//设置列状态
@@ -336,17 +336,17 @@ $.extend(cb.model.Model3D.prototype,{
 					return false;
 
 				var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue, columns: cb.clone(this._data.columns) };
-				if (!this._before("ColumnStateChange", data))
+				if (!this._before("fieldStateChange", data))
 					return false;
 				
 				
 				this._data.columns[cellName] = this._data.columns[cellName] || {};//这样可能会增加新列
 				this._data.columns[cellName][propertyName] = value;
 
-				var args = new cb.model.PropertyChangeArgs(this._name, "ColumnStateChange", data);
+				var args = new cb.model.PropertyChangeArgs(this._name, "fieldStateChange", data);
 				this.PropertyChange(args);
 
-				this._after("ColumnStateChange", data);
+				this._after("fieldStateChange", data);
 			}
 			//设置行状态
 			else if (rowIndex >= 0 && !cellName) {
@@ -355,7 +355,7 @@ $.extend(cb.model.Model3D.prototype,{
 					return;
 
 				var data = { rowIndex: rowIndex, propertyName: propertyName, value: value, oldValue: oldValue };
-				if (!this._before("StateChange", data))
+				if (!this._before("rowStateChange", data))
 					return false;
 
 				if (!value && (propertyName == "readOnly" || propertyName == "disabled")) {
@@ -366,10 +366,10 @@ $.extend(cb.model.Model3D.prototype,{
 					this._data.rows[rowIndex][propertyName] = value;
 				}
 
-				var args = new cb.model.PropertyChangeArgs(this._name, "RowStateChange", data);
+				var args = new cb.model.PropertyChangeArgs(this._name, "rowStateChange", data);
 				this.PropertyChange(args);
 
-				this._after("RowStateChange", data);
+				this._after("rowStateChange", data);
 			}
 			//设置单元格状态
 			else if (rowIndex >= 0 && cellName) {
@@ -380,7 +380,7 @@ $.extend(cb.model.Model3D.prototype,{
 					return;
 
 				var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue };
-				if (!this._before("CellStateChange", data))
+				if (!this._before("fieldStateChange", data))
 					return false;
 
 				if (cb.isEmpty(value)) {
@@ -405,10 +405,10 @@ $.extend(cb.model.Model3D.prototype,{
 						cell = this._data.rows[rowIndex][cellName] = { value: cell };
 					cell[propertyName] = value;
 				}
-				var args = new cb.model.PropertyChangeArgs(this._name, "CellStateChange", data);
+				var args = new cb.model.PropertyChangeArgs(this._name, "fieldStateChange", data);
 				this.PropertyChange(args);
 
-				this._after("CellStateChange", data);
+				this._after("fieldStateChange", data);
 			}
 		}
 
@@ -577,8 +577,8 @@ $.extend(cb.model.Model3D.prototype,{
 	getCellState:function (rowIndex, cellName, propertyName) {
 		return this.get(rowIndex, cellName, propertyName);
 	},
-	getReadOnly:function (rowIndex, cellName) {
-		return this.get(rowIndex, cellName, "readOnly");
+	getReadOnly:function (rowIndex, cellName) {//行字段的可编辑行收行和列的可编辑状态影响。
+		return arguments.length!=2?this.get(rowIndex, cellName, "readOnly"):(this.get(rowIndex,'readOnly')||this.get(cellName,'readOnly')||this.get(rowIndex, cellName, "readOnly"));
 	},
 	setReadOnly:function (rowIndex, cellName, value) {
 		if (arguments.length == 0)
@@ -933,8 +933,16 @@ $.extend(cb.model.Model3D.prototype,{
 
 	//焦点行，选中行操作、管理(通过索引操作，应用开发人员不能直接操作model总的行数据，只能通过api操作，获取的行数据为数据副本)
 	
-	getRow:function (rowIndex) {
-		return cb.clone(this._data.rows[rowIndex]);
+	getRow:function (rowIndex,keepStates) {
+		var rowData=cb.clone(this._data.rows[rowIndex]);
+		if(!keepStates){
+			for(var field in rowData){
+				if(typeof rowData[field]==='object'){
+					rowData[field]=rowData[field].value||rowData[field].defaultValue;
+				}
+			}
+		}
+		return rowData;
 	},
 	//焦点管理
 	setFocusedIndex:function (index) {
@@ -1039,16 +1047,21 @@ $.extend(cb.model.Model3D.prototype,{
 	},
 	//#endregion
 	
-	registerEditor:function(name,def){
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "registerEditor", {name:def}));
+	registerFieldEditor:function(name,def){
+		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "registerFieldEditor", {name:def}));
 	},
 	//编辑相关
-	_onCellEditing:function(data){//data中包含行位置索引和列名
+	//在字段上点击
+	_isFieldEditable:function(index,field){
+		return !this.getColumnState(field,'readOnly')&&this.getRowState(field,'readOnly')
+	},
+	_onBeforeEditField:function(data){//data中包含行位置索引和列名
 		var index=data.rowIndex,
 			field=data.field;
-		var record=this.getRow(index);
-		var evtArg={record:record,field:field,index:index}
-		//if (!this._before("CellEditing",evtArg))return;
+		var readOnly=this.getReadOnly(index,field);
+		if(readOnly)return;
+		var evtArg={record:this.getRow(index),field:field,index:index}
+		if (!this._before("CellEditing",evtArg))return;//提供编辑前预处理机制，可用于编辑前的校验（有时候编辑字段之间存在依赖关系，例如某些值不空时才能编辑对应字段）
 		this.setFocusedIndex(index);
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "cellEditing", evtArg));	
 	

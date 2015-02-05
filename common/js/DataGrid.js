@@ -235,6 +235,10 @@ DataGrid.prototype={
 		
 		this.sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
 		this.render(opts.rows);
+		
+		if(this.editable&&this.editMode=='CellEditor'&&!this.editors){
+			this._cellEditors=$.extend(true,DataGrid.cellEditors);//创建每种类型的编辑器实例;//避免被模型中的属性覆盖，加_;
+		}
 	},
 	//只设置状态，不改变视图
 	_setFrozenField:function(field,inner){
@@ -544,13 +548,19 @@ DataGrid.prototype={
 			});
 		//点击单元格
 		this.$el.on('click','.viewBody .field',function(evt){
+			var field=$(this).data('field');
+			var rowIndex=$(this.parentNode).index();
+			//处理之前编辑的单元格
+			if(dg._currentEditor&&(dg._editRowIndex!==rowIndex||dg._editingField!==field)){
+				var currentValue=dg._currentEditor.getValue();
+				if(currentValue!==dg._currentEditor.initValue){
+					//尝试修改model
+					dg.execute('fieldValueChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
+				}
+				$(dg.cellEditorWrapper).closest('td').children('.cellContent').css('visibility','visible');//显示内容
+			}
 			if(dg.editable){
-				var field=$(this).data('field');
-				var col=dg.getColumn(field);
-				if(!col.isEditable())return;
-				
-				var rowIndex=$(this.parentNode).index();
-				dg.execute('cellEditing',{rowIndex:rowIndex,field:field});
+				dg.execute('beforeEditField',{rowIndex:rowIndex,field:field});
 			}
 		});
 	},
@@ -816,8 +826,32 @@ DataGrid.prototype={
 		
 		return arr.join('');
 	},
+	//判断指定列是否固定
+	_isFrozenedColumn:function(col){
+		if(typeof col==='string'){
+			col=this._nameColMap[col];
+		}
+		return this.cols.indexOf(col)<=this.frozenIndex;
+	},
+	//判断是否是显示的第一列
+	_isFirstColumn:function(col){
+		if(typeof col==='string'){
+			col=this._nameColMap[col];
+		}
+		var cols=this.cols;
+		var firstVisible=null;
+		for(var i=0,len=cols.length;i<len;i++){
+			if(cols[i].visible){firstVisible=cols[i];break;}
+		}
+		return firstVisible&&col===firstVisible;
+	},
+	_getTdCellOuterHtml2:function(col,value,dataContext){
+		var first=this._isFirstColumn(col);
+		var left=this._isFrozenedColumn(col);
+		var html=this._getTdCellOuterHtml(col,value,dataContext,left,first);
+		return html;
+	},
 	_getTdCellOuterHtml:function(col,value,dataContext,left,first){
-		//return '<td >'+value+'</td>';
 		//todo:后续需支持具体到单元格的格式化，这时候fomatter信息有行数据指定。
 		var contentHtml=col.getFormatter().call(col,value,dataContext);
 		var arr=new Array(30),j=0;
@@ -1054,19 +1088,41 @@ DataGrid.prototype={
 	_isAllChecked:function(){
 		return this.getSelectedRows().length===this._getRows().length;
 	},
-	//
+	//单元格编辑模式下，一个时间点最多有一个编辑器；cellEditorWrapper控制样式，提供一个环境；
 	_setCellEditing:function(field,rowIndex,dataContext){
+		var dg=this;
+		if(!this.cellEditorWrapper){//第一次调用时，生成编辑器包装
+			this.cellEditorWrapper=$('<table class="cellEditorWrapper"><tbody><tr><td></td></tr></tbody></table>')[0];
+			//当鼠标在编辑器外点击时，触发提交修改
+			/*
+			$(document).click(function(evt){
+				if($(evt.target).parents().has(dg.cellEditorWrapper))return;
+				var currentValue=dg._currentEditor.getValue();
+				if(currentValue!==dg._currentEditor.initValue){
+					//尝试修改model
+					dg.execute('fieldValueChange',{field:dg._editingField,index:_editRowIndex,value:currentValue});
+				}
+				$(dg.cellEditorWrapper).closest('td').children('.cellContent').css('visibility','visible');//显示内容
+			});
+			
+			*/
+			$(this.cellEditorWrapper).on('click',function(evt){evt.stopPropagation()});
+		}
 		var col=this.getColumn(field);
-		var container=$(this._getEditorContainer(field,rowIndex));
-		var editorContructor=this._getEditor(col,dataContext);
-		container.children('.cellContent').css('visibility','hidden');
-		editorContructor.init(container.children('.cellBorder')[0]);
+		var container=this._getEditorContainer(rowIndex,field);
+		container.appendChild(this.cellEditorWrapper);
+		this._currentEditor=this._getFieldEditor(col,dataContext);//保存对编辑器的引用
 		//隐藏内容
-		
+		$(container).closest('td').children('.cellContent').css('visibility','hidden');
+		this._currentEditor.init(this.cellEditorWrapper.rows[0].cells[0],col);
+		this._currentEditor.initValue=dataContext[field];
+		this._currentEditor.setValue(dataContext[field]);
+		this._editingField=field;
+		this._editRowIndex=rowIndex;
 		
 	},
-	//支持获取具名的编辑器（具名的编辑器包括Grid内置的编辑器和用户通过registerEditor方法注册的自定义编辑器）
-	_getEditor:function(config,dataContext){
+	//支持获取具名的编辑器（具名的编辑器包括Grid内置的编辑器和用户通过registerFieldEditor方法注册的自定义编辑器）
+	_getFieldEditor:function(config,dataContext){
 		var name;
 		if(typeof config==='object'){
 			var ctrlType=config.ctrlType;
@@ -1074,27 +1130,31 @@ DataGrid.prototype={
 		}else{
 			name=config;
 		}
-		return this._getEditorByName(name);
+		return this._getFieldEditorByName(name);
 	},
 	//注册grid实例用的编辑器(不能注册同内置编辑器同名的编辑器，否则会被覆盖)
-	registerEditor:function(name,def){
-		this._editors=this._editors||{};
-		$.extend(this._editors[name],DataGrid.editors['DefaultEditor'],def);
+	registerFieldEditor:function(name,def){
+		this._cellEditors[name]=$.extend({},DataGrid.cellEditors['DefaultEditor'],def);
 	},
 	//获取编辑器，如果grid实例中有定义则用实例自己的编辑器，否则到内置的公用编辑器中查询，如果还是未找到名称对应的编辑器，则返回默认编辑器。
-	_getEditorByName:function(name){
+	_getFieldEditorByName:function(name){
 		if(!name)name='';
-		return this._editors&&this._editors[name]||DataGrid.editors[name]||DataGrid.editors['DefaultEditor'];
+		return this._cellEditors[name]||this._cellEditors['DefaultEditor'];
 	},
-	_getEditorContainer:function(field,rowIndex){
+	_getEditorContainer:function(rowIndex,field){
 		var row=this._getRow(rowIndex);
-		var container=$(row).find('[data-field='+field+']');
+		var container=$(row).find('[data-field='+field+'] .cellBorder');
 		return container[0];
 	},
 	_getRow:function(index){
 		return this.$el.find('.viewBody table')[0].rows[index+1];//不计算表头行
 	},
-	
+	updateCell:function(rowIndex,field,value,rowData){
+		var td=this._getEditorContainer(rowIndex,field).parentNode;
+		var col=this._nameColMap[field];
+		var html=this._getTdCellOuterHtml2(this.getColumn(field),value,rowData);
+		$(td).replaceWith(html);
+	},
 	
 	___end:''
 }

@@ -47,7 +47,7 @@ var CheckboxEditor=$.extend({},Editor,{
 var TextBoxEditor=$.extend({},Editor,{
 	init: function(container, options){
 		if(!this.el){
-			this.el=$('<table border=0 class="cellEdtior TextBoxEditor"><tr><td><input type="text" /></div></td></tr><table>').appendTo(container)[0];
+			this.el=$('<div class="cellEdtior TextBoxEditor"><input type="text" /></div>').appendTo(container)[0];
 			this.target=$(this.el).find('input')[0];
 			//时间处理
 		}else{
@@ -76,7 +76,9 @@ var DateTimeEditor=$.extend({},Editor,{
 var ReferEditor=$.extend({},Editor,{
 
 });
-DataGrid.editors={
+/*所有grid都能用的编辑器；可编辑的grid，在实例化时会初始化自己的编辑器（没中公共的编辑器都会创建一个编辑器实例，grid注册编辑器时，会实例化一个对应的编辑器实例）
+*/
+DataGrid.cellEditors={
 	'DefaultEditor':Editor,
 	'CheckboxEditor':CheckboxEditor,
 	'TextBoxEditor':TextBoxEditor,

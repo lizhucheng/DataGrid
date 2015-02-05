@@ -176,22 +176,24 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	
 	///////////编辑功能相关
 	
-	this._onCellEditing=function(data){
-		this.getModel()._onCellEditing(data);
+	this._onBeforeEditField=function(data){
+		this.getModel()._onBeforeEditField(data);
 	};
 	this._set_cellEditing=function(control,data){
 		control._setCellEditing(data.field,data.index,data.record);
 	};
 
-	this._set_registerEditor=function(control,data){
-		control.registerEditor(data.name,data.def);
+	this._set_registerFieldEditor=function(control,data){
+		control.registerFieldEditor(data.name,data.def);
 	};
-	this._onCellChange = function (rowIndex, cellName, cellValue) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.cellChange) model.cellChange(rowIndex, cellName, cellValue);
-    };
-
+	this._onFieldValueChange=function(data){
+		var model = this.getModel();
+		model.set(data.rowIndex, data.field,'value',data.value);
+	};
+	this._set_fieldStateChange=function(control,data){
+		var rowData=this.getModel().getRow(data.rowIndex);
+		control.updateCell(data.rowIndex,data.cellName,data.value,rowData);
+	};
     this._onAddNewRow = function (rowIndex) {
         var model = this.getModel();
         if (!model) return;
@@ -270,11 +272,11 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.un("focusChange", this._onFocusChange);
             control.on("focusChange", this._onFocusChange, this);
 			
-			control.un("cellEditing", this._onCellEditing);
-			control.on("cellEditing", this._onCellEditing, this);
-			//
-			control.un("onCellChange", this._onCellChange);
-            control.on("onCellChange", this._onCellChange, this);
+			control.un("beforeEditField", this._onBeforeEditField);
+			control.on("beforeEditField", this._onBeforeEditField, this);
+			control.un("fieldValueChange", this._onFieldValueChange);
+            control.on("fieldValueChange", this._onFieldValueChange, this);
+
 			
             control.un("onAddNewRow", this._onAddNewRow);
             control.on("onAddNewRow", this._onAddNewRow, this);

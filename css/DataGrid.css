@@ -258,13 +258,13 @@
 }
 
 /*内置编辑器样式*/
-.grid  table.cellEdtior{
+.grid  table.cellEditorWrapper{
 	width:100%;
 	height:100%;
 	table-layout:fixed;
 	border-collapse:collapse;
 }
-.grid  table.cellEdtior td{
+.grid  table.cellEditorWrapper td{
 	padding:2px;
 }
 .grid .TextBoxEditor  input{
