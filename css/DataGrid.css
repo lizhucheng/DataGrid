@@ -267,6 +267,9 @@
 .grid  table.cellEditorWrapper td{
 	padding:2px;
 }
+.grid  table.cellEditorWrapper td *{
+	box-sizing:border-box;
+}
 .grid .TextBoxEditor  input{
 	width:100%;
 	box-sizing:border-box;

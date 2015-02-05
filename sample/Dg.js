@@ -9,8 +9,12 @@ DgViewModel.prototype.constructor = DgViewModel;
 DgViewModel.prototype.init = function () {
     var fields = {
         ViewModelName: "DgViewModel",
-        
+		
+        date:new cb.model.SimpleModel(),
+		status:new cb.model.SimpleModel({dataSource:[{text:"未发货",value:"0"},{text:"部分发货",value:"1"},{text:"发货完毕",value:"2"}]}),
+		
 		product:new cb.model.Model3D(options)
+		
 		
 		};
 		

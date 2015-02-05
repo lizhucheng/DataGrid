@@ -143,16 +143,13 @@ cb.convert = {}; //
 
 //#region 事件管理
 cb.events = {};
-cb.events.on = cb.events.bind = function (name, callback,context) {
+cb.events.on = cb.events.bind = function (name, callback, context) {
     if (!name || !callback)
         return;
     name = name.toLowerCase(); //一律使用小写
     this._events || (this._events = {});
     var events = this._events[name] || (this._events[name] = []);
-	if(context){
-		callback._context=context;
-	}
-    events.push(callback);
+    events.push({ callback: callback, context: context });
 }
 cb.events.un = function (name, callback) {
     if (!name || !this._events)
@@ -164,8 +161,15 @@ cb.events.un = function (name, callback) {
 
     if (!callback)
         delete this._events[name]; //this._events[name] = null;
-    else
-        this._events[name].removeData(callback);
+    else {
+        var index = this._events[name].find(function () {
+            if (this.callback === callback)
+                return true;
+        });
+        if (index !== -1) {
+            this._events[name].removeData(this._events[name][index]);
+        }
+    }
 }
 
 cb.events.hasEvent = function (name) {
@@ -173,18 +177,16 @@ cb.events.hasEvent = function (name) {
     name = name.toLowerCase(); //一律使用小写
     return (name && this._events && this._events[name] && this._events[name].length > 0);
 }
-cb.events.execute = function (name, args) {
+cb.events.execute = function (name) {
     if (!name) return;
     name = name.toLowerCase(); //一律使用小写
     var events = this._events ? this._events[name] : null;
     if (!events)
         return true;
     var result = true;
+    var args = Array.prototype.slice.call(arguments, 1);
     for (var i = 0; i < events.length; i++) {
-		args=[].slice.call(arguments,0);
-		args.shift();
-		var callback=events[i];
-        result = callback.apply(callback._context||this, args) === false ? false : result;
+        result = events[i].callback.apply(events[i].context || this, args) === false ? false : result;
     }
 
     return result;
@@ -292,6 +294,8 @@ cb.cache = {
 cb.cache.viewmodels = { get: cb.cache.get, set: cb.cache.set, clear: cb.cache.clear };
 cb.cache.controls = { get: cb.cache.get, set: cb.cache.set, clear: cb.cache.clear };
 cb.cache.newIds = { get: cb.cache.get, set: cb.cache.set, clear: cb.cache.clear };
+cb.cache.bindings = { get: cb.cache.get, set: cb.cache.set, clear: cb.cache.clear };
+cb.cache.mappings = { get: cb.cache.get, set: cb.cache.set, clear: cb.cache.clear };
 
 //#endregion
 
@@ -377,6 +381,19 @@ cb.model.PropertyChange.doPropertyChange = function () {
     cb.console.log("doPropertyChange:: " + cb.monitor.timeSpan());
 }
 
+// UNCHANGED = 0;//不变化
+// UPDATED = 1;//更新
+// NEW = 2;//新增
+// DELETED = 3;//删除
+cb.model.DataState = {
+    Add: 2,
+    Delete: 3,
+    Update: 1,
+    Unchanged: 0
+};
+
+// #region BaseModel
+
 cb.model.BaseModel = function (parent, name, data) {
 
     if (typeof arguments[0] == "object" && !name && !data) {
@@ -398,6 +415,12 @@ cb.model.BaseModel = function (parent, name, data) {
             delete this._data[attr];
         }
     }
+    //大小写适应, 后续需要考虑其他方案
+    //this._data.value = this._data.value || this._data.Value || null;
+    if (!this._data.value) {
+        //delete this._data.value;
+        //delete this._data.Value;
+    }
     this._data.readOnly = this._data.readOnly || this._data.ReadOnly || this._data.readonly || false;
     if (!this._data.readOnly) {
         delete this._data.ReadOnly;
@@ -410,9 +433,7 @@ cb.model.BaseModel = function (parent, name, data) {
         delete this._data.Disabled;
     }
 }
-
 cb.extend(cb.model.BaseModel.prototype, cb.events); //事件扩展
-
 cb.model.BaseModel.prototype.addListener = function (listener) {
     if (!this._listeners)
         this._listeners = [];
@@ -541,6 +562,11 @@ cb.model.BaseModel.prototype._$getId = function (obj) {
 cb.model.BaseModel.prototype._$setId = function (obj) {
     obj._$id = Math.random();
 };
+
+// #endregion
+
+// #region SimpleModel
+
 cb.model.SimpleModel = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
 
@@ -625,6 +651,12 @@ cb.model.SimpleModel = function (parent, name, data) {
         return this.execute("after" + eventName);
     };
 }
+cb.model.SimpleModel.prototype = new cb.model.BaseModel();
+
+// #endregion
+
+// #region Model2D
+
 cb.model.Model2D = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
 
@@ -922,6 +954,47 @@ cb.model.Model2D = function (parent, name, data) {
         this.fireEvent("changePage", { pageSize: pageSize, pageIndex: pageIndex });
     };
 };
+cb.model.Model2D.prototype = new cb.model.BaseModel();
+//支持数据对象，考虑跟set合并成一个方法
+cb.model.Model2D.prototype.setData = function (data) {
+    cb.console.log("Model2D.setData", this);
+    if (arguments.length == 0)
+        return;
+    if (!arguments[0] || !data)
+        return;
+    if (arguments.length == 1 && !typeof data == "object") //if (data.constructor != Object || data.constructor != Array)
+        return;
+    if (data.constructor == Array)
+        data = { Rows: data };
+    if (arguments.length == 2) {
+        var tempData = {};
+        tempData[arguments[0]] = arguments[1];
+        data = tempData;
+    }
+    if (data.Rows) {
+        //this.add(data.Rows, true);
+        this.setRows(data.Rows);
+        delete data.Rows;
+    }
+    for (var attr in data) {
+        value = data[attr];
+        if (typeof value == "function") {
+            this.on(attr, value);
+        }
+        else if (this._data.hasOwnProperty(attr) || !cb.isEmpty(value)) {
+            this.set(attr, value); //需要考虑批量操作
+        }
+    }
+    cb.console.log("Model2D.setData", this);
+}
+cb.model.Model2D.prototype.getData = function (propertyName, onlyCollectDirtyData) {
+    return this._data.Rows;
+}
+
+// #endregion
+
+// #region Model3D
+
 cb.model.Model3D = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
     this._listeners = [];
@@ -1005,7 +1078,8 @@ cb.model.Model3D = function (parent, name, data) {
                 cell.Value = value;
             else
                 row[cellName] = value;
-            row.state = cb.model.DataState.Update;
+            if (row.state != cb.model.DataState.Add)
+                row.state = cb.model.DataState.Update;
 
             var args = new cb.model.PropertyChangeArgs(this._name, "CellValueChange", context);
             this.PropertyChange(args);
@@ -1802,16 +1876,145 @@ cb.model.Model3D = function (parent, name, data) {
         return dataCopy;
     };
 };
-// UNCHANGED = 0;//不变化
-// UPDATED = 1;//更新
-// NEW = 2;//新增
-// DELETED = 3;//删除
-cb.model.DataState = {
-    Add: 2,
-    Delete: 3,
-    Update: 1,
-    Unchanged: 0
+cb.model.Model3D.prototype = new cb.model.BaseModel();
+cb.model.Model3D.prototype.getPkName = function () {
+    var columns = this._data.Columns || {};
+    for (var col in columns) {
+        colData = columns[col];
+        if (!colData || !colData.constructor == Object)
+            continue;
+        if (colData["key"] == true || colData["isKey"] == true)
+            return col
+    }
+    return "id";
 };
+//支持数据对象，考虑跟set合并成一个方法 支持setData(Rows),支持setData({}),支持setData(propertyName,value)
+cb.model.Model3D.prototype.setData = function (data) {
+    cb.console.log("Model3D.setData", this);
+    if (arguments.length == 0)
+        return;
+    if (!arguments[0] || !data)
+        return;
+    if (arguments.length == 1 && !typeof data == "object") //if (data.constructor != Object || data.constructor != Array)
+        return;
+    if (data.constructor == Array)
+        data = { Rows: data };
+    if (arguments.length == 2) {
+        var tempData = {};
+        tempData[arguments[0]] = arguments[1];
+        data = tempData;
+    }
+    //var _data = { readOnly: true, Columns: { ID: {}, Code: {} }, Rows: [{ ID: 1, Code: 111 }, { ID: 222, Code: { value: 12, readOnly: 1}}], FocusedRow: null, FocusedIndex: 1 };
+    if (data.Rows) {
+        //this.add(data.Rows, true);
+        this.setRows(data.Rows);
+        delete data.Rows;
+    }
+    if (data.Columns) {
+        for (var column in data.Columns) {
+            columnData = data.Columns[column];
+            if (!columnData || !columnData.constructor == Object)
+                continue;
+            for (var propertyName in columnData) {
+                this.setColumnState(column, propertyName, columnData[propertyName]); //需要考虑批量操作
+            }
+        }
+        delete data.Columns;
+    }
+    for (var attr in data) {
+        value = data[attr];
+        if (typeof value == "function") {
+            this.on(attr, value);
+        }
+        else if (this._data.hasOwnProperty(attr) || !cb.isEmpty(value)) {
+            this.set(attr, value); //需要考虑批量操作
+        }
+    }
+    //this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, propertyName, value, oldValue));//后期改成批量操作，操作传递到前台用批量方式
+    cb.console.log("Model3D.setData", this);
+}
+cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyData) {
+    var pkName = this.getPkName();
+    var tsName = this.getTsName();
+    if (onlyCollectDirtyData && propertyName == "value") {
+        var datas = [];
+        var rows = this._data.Rows; ////this._data.Cache;???//多页数据怎么处理
+        var length = rows.length;
+        for (var i = 0; i < length; i++) {
+            var tempData = {};
+            if (rows[i].state != cb.model.DataState.Unchanged && this._parent.isDirty(this, i)) { // this._parent.isDirty(this, i),需要修改
+                for (var attr in rows[i]) {
+                    if (attr != "readOnly" && attr != "disabled" && typeof rows[i][attr] != "function") {
+                        if (attr == pkName || attr == tsName || this._parent.isDirty(this, i, attr)) {
+                            tempData[attr] = (cb.isEmpty(rows[i][attr]) || typeof rows[i][attr] != "object") ? rows[i][attr] : rows[i][attr].Value;
+                        }
+                    }
+                }
+                tempData.state = rows[i].state;
+            }
+            else { //下面数据可以不传递
+                var pkColVal = rows[i][pkName];
+                var tsColVal = rows[i][tsName];
+                tempData[pkName] = (cb.isEmpty(pkColVal) || typeof pkColVal != "object") ? pkColVal : pkColVal.Value;
+                tempData[tsName] = (cb.isEmpty(tsColVal) || typeof tsColVal != "object") ? tsColVal : tsColVal.Value;
+                tempData.state = cb.model.DataState.Unchanged;
+            }
+            datas.push(tempData);
+        }
+
+        var deleteRows = this._data.DeleteRows || [];   //删除行的处理,删除行只收集id、ts、state
+        for (var i = 0; i < deleteRows.length; i++) {
+            var cell = deleteRows[i]["ts"];
+            var tsValue = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
+            cell = deleteRows[i]["id"];
+            var idValue = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
+            var data = {
+                state: cb.model.DataState.Delete,
+                ts: tsValue,
+                ts: idValue
+            };
+            datas.push(data);
+        }
+
+        return datas;
+    }
+    else {
+        if (propertyName == "value") {
+            var rows = this._data.Rows.clone(); //this._data.Cache;???//多页数据怎么处理
+            if (this._data.Rows.length == 0) rows.length = 0;
+            for (var i = 0; i < rows.length; i++) {
+                delete rows[i].readOnly;
+                delete rows[i].disabled;
+                for (var attr in rows[i]) {
+                    var cell = rows[i][attr];
+                    rows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
+                }
+                rows[i].state = rows[i].state == null ? cb.model.DataState.Unchanged : rows[i].state;
+            }
+            //删除行的处理,删除行只收集id、ts、state
+            var deleteRows = this._data.DeleteRows || [];
+            for (var i = 0; i < deleteRows.length; i++) {
+                delete deleteRows[i].readOnly;
+                delete deleteRows[i].disabled;
+                for (var attr in deleteRows[i]) {
+                    var cell = deleteRows[i][attr];
+                    deleteRows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
+                }
+                deleteRows[i].state = cb.model.DataState.Delete;
+                rows.push(deleteRows[i]);
+            }
+            return rows;
+        }
+        else {
+            return this._data.Rows;
+        }
+    }
+}
+
+// #endregion
+
+// #region ContainerModel
+
 cb.model.ContainerModel = function (parent, name, data) {
     cb.model.BaseModel.call(this, parent, name, data);
     this._listeners = [];
@@ -1909,6 +2112,7 @@ cb.model.ContainerModel = function (parent, name, data) {
     //清空
     this.clear = function (isNewRecord) {
         for (var attr in this._data) {
+            if (attr == "backupData") continue;
             var prop = this.get(attr);
             if (!prop) continue;
 
@@ -1962,7 +2166,7 @@ cb.model.ContainerModel = function (parent, name, data) {
             options.params = { ID: id };
             options.method = "get";
             options.callback = function (data) {
-                me.LoadData(data);
+                me.loadData(data);
                 me._after("load", data);
             };
             this._proxy.Find(options);
@@ -1978,59 +2182,6 @@ cb.model.ContainerModel = function (parent, name, data) {
             options.callback = function (data) { me._after("delete"); };
             this._proxy.Delete(options);
         }
-    };
-
-    //需要丰富
-    this.LoadData = function (data) {
-
-        cb.model.PropertyChange.delayPropertyChange(true); //延迟触发属性(值等)变化
-
-        this.clear();
-        this.setData(data);
-        this.setDirty(false);
-        cb.model.PropertyChange.doPropertyChange(); //恢复值变化(PropertyChange)等
-    };
-    this.NewRecord = function () {
-        cb.model.PropertyChange.delayPropertyChange(true); //延迟触发属性(值等)变化
-
-        this.clear(true);
-
-        cb.model.PropertyChange.doPropertyChange(); //恢复值变化(PropertyChange)等
-    };
-
-    this.Validate = function () {
-        cb.model.PropertyChange.delayPropertyChange(true); //延迟触发属性(值等)变化
-        var result = true;
-        var message = "";
-        for (var attr in this._data) {
-            if (attr.toLowerCase() === "id") continue;        //id不做校验
-            var prop = this.get(attr);
-            if (!prop || !prop.get || prop.get("controlType") === cb.ControlType.Button || prop.get("key") === true) continue;
-            if (prop.get("nullable") === false) {
-                var value = prop.getValue();
-                if (value !== 0 && value !== false && !value) {
-                    result = false;
-                    message += (prop.get("title") || prop.getModelName()) + ", ";
-                    cb.console.error((prop.get("title") || prop.getModelName()) + "不能为空！");
-                    prop.set("noinput", true);
-                }
-                else {
-                    prop.set("noinput", false);
-                }
-            }
-        }
-        if (message)
-            alert("以下栏目不能为空：\r\n" + message);
-        cb.model.PropertyChange.doPropertyChange(); //恢复值变化(PropertyChange)等
-        return result;
-    };
-    this.collectData = function (onlyCollectDirtyData) {
-        /// <summary>数据收集： 默认this._controlType !== cb.ControlType.Button的数据不收集</summary>
-        /// <param name="onlyCollectDirtyData" type="Boolean">onlyCollectDirtyData: 是否只收集脏数据</param>
-        /// <returns type="Object">收集到的数据对象, JSON格式</returns>
-
-        //return onlyCollectDirtyData ? this.getDirtyData(true) : this.getData();
-        return this.getData(onlyCollectDirtyData);
     };
 
     //脏数据管理，待丰富整理
@@ -2158,10 +2309,6 @@ cb.model.ContainerModel.create = function (data, name, parent) {
     return obj;
 }
 cb.model.ContainerModel.prototype = new cb.model.BaseModel();
-cb.model.SimpleModel.prototype = new cb.model.BaseModel();
-cb.model.Model2D.prototype = new cb.model.BaseModel();
-cb.model.Model3D.prototype = new cb.model.BaseModel();
-
 cb.model.ContainerModel.prototype.set = function (propertyName, value) {
     var alreadyHave = this._data.hasOwnProperty(propertyName);
     if (!alreadyHave) {
@@ -2226,7 +2373,6 @@ cb.model.ContainerModel.prototype.setData = function (data) {
     //this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, propertyName, value, oldValue));//后期改成批量操作，操作传递到前台用批量方式
     cb.console.log("ContainerModel.setData", this);
 }
-
 cb.model.ContainerModel.prototype.getData = function (onlyCollectDirtyData) {
     if (onlyCollectDirtyData)
         return this.getDirtyData(true);
@@ -2288,7 +2434,6 @@ cb.model.ContainerModel.prototype.getDirtyData = function (onlyCollectDirtyData)
     }
     return dirtyData;
 };
-
 cb.model.ContainerModel.prototype.getModel3D = function () {
     var model3d = this.get("model3d");
     if (model3d) return model3d;
@@ -2335,7 +2480,55 @@ cb.model.ContainerModel.prototype.getTsValue=function(){
 cb.model.ContainerModel.prototype.getTsName = cb.model.Model3D.prototype.getTsName = function(){
 	return "ts";
 };
-cb.model.ContainerModel.prototype.LoadFieldPermData = function (data) {
+//需要丰富
+cb.model.ContainerModel.prototype.loadData = function (data) {
+    cb.model.PropertyChange.delayPropertyChange(true); //延迟触发属性(值等)变化
+    this.set("backupData", data);
+    this.clear();
+    this.setData(data);
+    this.setDirty(false);
+    cb.model.PropertyChange.doPropertyChange(); //恢复值变化(PropertyChange)等
+};
+cb.model.ContainerModel.prototype.newRecord = function () {
+    cb.model.PropertyChange.delayPropertyChange(true); //延迟触发属性(值等)变化
+    this.clear(true);
+    cb.model.PropertyChange.doPropertyChange(); //恢复值变化(PropertyChange)等
+};
+cb.model.ContainerModel.prototype.validate = function () {
+    cb.model.PropertyChange.delayPropertyChange(true); //延迟触发属性(值等)变化
+    var result = true;
+    var message = "";
+    for (var attr in this._data) {
+        if (attr.toLowerCase() === "id") continue;        //id不做校验
+        var prop = this.get(attr);
+        if (!prop || !prop.get || prop.get("controlType") === cb.ControlType.Button || prop.get("key") === true) continue;
+        if (prop.get("nullable") === false) {
+            var value = prop.getValue();
+            if (value !== 0 && value !== false && !value) {
+                result = false;
+                message += (prop.get("title") || prop.getModelName()) + ", ";
+                cb.console.error((prop.get("title") || prop.getModelName()) + "不能为空！");
+                prop.set("noinput", true);
+            }
+            else {
+                prop.set("noinput", false);
+            }
+        }
+    }
+    if (message)
+        alert("以下栏目不能为空：\r\n" + message);
+    cb.model.PropertyChange.doPropertyChange(); //恢复值变化(PropertyChange)等
+    return result;
+};
+cb.model.ContainerModel.prototype.collectData = function (onlyCollectDirtyData) {
+    /// <summary>数据收集： 默认this._controlType !== cb.ControlType.Button的数据不收集</summary>
+    /// <param name="onlyCollectDirtyData" type="Boolean">onlyCollectDirtyData: 是否只收集脏数据</param>
+    /// <returns type="Object">收集到的数据对象, JSON格式</returns>
+
+    //return onlyCollectDirtyData ? this.getDirtyData(true) : this.getData();
+    return this.getData(onlyCollectDirtyData);
+};
+cb.model.ContainerModel.prototype.loadFieldPermData = function (data) {
     if (!data || !data.entityPerm) return;
     cb.model.PropertyChange.delayPropertyChange(true);
     for (var entity in data.entityPerm) {
@@ -2377,177 +2570,20 @@ cb.model.ContainerModel.prototype.LoadFieldPermData = function (data) {
     }
     cb.model.PropertyChange.doPropertyChange();
 };
-cb.model.Model3D.prototype.getPkName = function () {
-	 var columns = this._data.Columns||{};
-	 for (var col in columns) {
-		colData = columns[col];
-		if (!colData || !colData.constructor == Object)
-			continue;
-		if(colData["key"]==true||colData["isKey"]==true)
-			return col
-	 }
-	 return "id";
+cb.model.ContainerModel.prototype.copyData = function (callback) {
+    var data = this.collectData();
+    callback.call(this, data);
+    this.loadData(data);
+    this.setReadOnly(false);
 };
-//支持数据对象，考虑跟set合并成一个方法 支持setData(Rows),支持setData({}),支持setData(propertyName,value)
-cb.model.Model3D.prototype.setData = function (data) {
-    cb.console.log("Model3D.setData", this);
-    if (arguments.length == 0)
-        return;
-    if (!arguments[0] || !data)
-        return;
-    if (arguments.length == 1 && !typeof data == "object") //if (data.constructor != Object || data.constructor != Array)
-        return;
-    if (data.constructor == Array)
-        data = { Rows: data };
-    if (arguments.length == 2) {
-        var tempData = {};
-        tempData[arguments[0]] = arguments[1];
-        data = tempData;
-    }
-    //var _data = { readOnly: true, Columns: { ID: {}, Code: {} }, Rows: [{ ID: 1, Code: 111 }, { ID: 222, Code: { value: 12, readOnly: 1}}], FocusedRow: null, FocusedIndex: 1 };
-    if (data.Rows) {
-        //this.add(data.Rows, true);
-        this.setRows(data.Rows);
-        delete data.Rows;
-    }
-    if (data.Columns) {
-        for (var column in data.Columns) {
-            columnData = data.Columns[column];
-            if (!columnData || !columnData.constructor == Object)
-                continue;
-            for (var propertyName in columnData) {
-                this.setColumnState(column, propertyName, columnData[propertyName]); //需要考虑批量操作
-            }
-        }
-        delete data.Columns;
-    }
-    for (var attr in data) {
-        value = data[attr];
-        if (typeof value == "function") {
-            this.on(attr, value);
-        }
-        else if (this._data.hasOwnProperty(attr) || !cb.isEmpty(value)) {
-            this.set(attr, value); //需要考虑批量操作
-        }
-    }
-    //this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, propertyName, value, oldValue));//后期改成批量操作，操作传递到前台用批量方式
-    cb.console.log("Model3D.setData", this);
-}
+cb.model.ContainerModel.prototype.restoreData = function (callback) {
+    var data = this.get("backupData");
+    callback.call(this, data);
+    this.loadData(data);
+    this.setReadOnly(true);
+};
 
-cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyData) {
-    var pkName = this.getPkName();
-    var tsName = this.getTsName();
-    if (onlyCollectDirtyData && propertyName == "value") {
-        var datas = [];
-        var rows = this._data.Rows; ////this._data.Cache;???//多页数据怎么处理
-        var length = rows.length;
-        for (var i = 0; i < length; i++) {
-            var tempData = {};
-            if (rows[i].state != cb.model.DataState.Unchanged && this._parent.isDirty(this, i)) { // this._parent.isDirty(this, i),需要修改
-                for (var attr in rows[i]) {
-                    if (attr != "readOnly" && attr != "disabled" && typeof rows[i][attr] != "function") {
-                        if (attr == pkName || attr == tsName || this._parent.isDirty(this, i, attr)) {
-                            tempData[attr] = (cb.isEmpty(rows[i][attr]) || typeof rows[i][attr] != "object") ? rows[i][attr] : rows[i][attr].Value;
-                        }
-                    }
-                }
-                tempData.state = rows[i].state;
-            }
-            else { //下面数据可以不传递
-                var pkColVal = rows[i][pkName];
-                var tsColVal = rows[i][tsName];
-                tempData[pkName] = (cb.isEmpty(pkColVal) || typeof pkColVal != "object") ? pkColVal : pkColVal.Value;
-                tempData[tsName] = (cb.isEmpty(tsColVal) || typeof tsColVal != "object") ? tsColVal : tsColVal.Value;
-                tempData.state = cb.model.DataState.Unchanged;
-            }
-            datas.push(tempData);
-        }
-
-        var deleteRows = this._data.DeleteRows || [];   //删除行的处理,删除行只收集id、ts、state
-        for (var i = 0; i < deleteRows.length; i++) {
-            var cell = deleteRows[i]["ts"];
-            var tsValue = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
-            cell = deleteRows[i]["id"];
-            var idValue = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
-            var data = {
-                state: cb.model.DataState.Delete,
-                ts: tsValue,
-                ts: idValue
-            };
-            datas.push(data);
-        }
-
-        return datas;
-    }
-    else {
-        if (propertyName == "value") {
-            var rows = this._data.Rows.clone(); //this._data.Cache;???//多页数据怎么处理
-            if (this._data.Rows.length == 0) rows.length = 0;
-            for (var i = 0; i < rows.length; i++) {
-                delete rows[i].readOnly;
-                delete rows[i].disabled;
-                for (var attr in rows[i]) {
-                    var cell = rows[i][attr];
-                    rows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
-                }
-                rows[i].state = rows[i].state == null ? cb.model.DataState.Unchanged : rows[i].state;
-            }
-            //删除行的处理,删除行只收集id、ts、state
-            var deleteRows = this._data.DeleteRows || [];
-            for (var i = 0; i < deleteRows.length; i++) {
-                delete deleteRows[i].readOnly;
-                delete deleteRows[i].disabled;
-                for (var attr in deleteRows[i]) {
-                    var cell = deleteRows[i][attr];
-                    deleteRows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
-                }
-                deleteRows[i].state = cb.model.DataState.Delete;
-                rows.push(deleteRows[i]);
-            }
-            return rows;
-        }
-        else {
-            return this._data.Rows;
-        }
-    }
-}
-
-//支持数据对象，考虑跟set合并成一个方法
-cb.model.Model2D.prototype.setData = function (data) {
-    cb.console.log("Model2D.setData", this);
-    if (arguments.length == 0)
-        return;
-    if (!arguments[0] || !data)
-        return;
-    if (arguments.length == 1 && !typeof data == "object") //if (data.constructor != Object || data.constructor != Array)
-        return;
-    if (data.constructor == Array)
-        data = { Rows: data };
-    if (arguments.length == 2) {
-        var tempData = {};
-        tempData[arguments[0]] = arguments[1];
-        data = tempData;
-    }
-    if (data.Rows) {
-        //this.add(data.Rows, true);
-        this.setRows(data.Rows);
-        delete data.Rows;
-    }
-    for (var attr in data) {
-        value = data[attr];
-        if (typeof value == "function") {
-            this.on(attr, value);
-        }
-        else if (this._data.hasOwnProperty(attr) || !cb.isEmpty(value)) {
-            this.set(attr, value); //需要考虑批量操作
-        }
-    }
-    cb.console.log("Model2D.setData", this);
-}
-
-cb.model.Model2D.prototype.getData = function (propertyName, onlyCollectDirtyData) {
-    return this._data.Rows;
-}
+// #endregion
 
 /*
 * 树节点数据模型
@@ -2977,8 +3013,6 @@ cb.model.TreeNode = (function () {
 
 })();
 
-
-
 //#endregion model
 
 //#region binding
@@ -3030,7 +3064,7 @@ cb.binding.BaseBinding = function (mapping, parent) {
             this.getControl().setNoinput(!newValue);
 
         cb.console.log("_onchange", "###newValue:" + newValue + ",oldValue:" + oldValue + "###");
-    }
+    };
     this._onclick = function (event) {
         cb.console.log("_onclick", this);
         var model = this.getModel();
@@ -3040,15 +3074,7 @@ cb.binding.BaseBinding = function (mapping, parent) {
         if (model.click)
             model.click(event);
         cb.console.log("_onclick", this);
-    }
-    this._onkeydown = function (event) {
-        //cb.console.log("_onkeydown", this);
-        event = event || window.event;
-        if (event.keyCode == 13) {
-            this._onchange(event);
-        }
-        //cb.console.log("_onkeydown",this);
-    }
+    };
 }
 cb.binding.BaseBinding.prototype.init = function (mapping, parent) {
     this._mapping = mapping || this._mapping;
@@ -3108,16 +3134,16 @@ cb.binding.BaseBinding.prototype.applyBindings = function () {
     //从控件到model
     if (this._mapping.bindingMode == cb.binding.BindingMode.TwoWay || this._mapping.bindingMode == cb.binding.BindingMode.OneTime) {
         if (this._onchange && (model.change || model.hasEvent("beforechange") || model.hasEvent("afterchange"))) {
-            if (control.un) control.un("onchange", this._onchange);
-            if (control.on) control.on("onchange", this._onchange, this);
+            if (control.un) control.un("change", this._onchange);
+            if (control.on) control.on("change", this._onchange, this);
         }
-        if (this._onkeydown) {
-            if (control.un) control.un("onkeydown", this._onkeydown);
-            if (control.on) control.on("onkeydown", this._onkeydown, this);
+        if (this._onchange && (model.change || model.hasEvent("beforechange") || model.hasEvent("afterchange"))) {
+            if (control.un) control.un("enter", this._onchange);
+            if (control.on) control.on("enter", this._onchange, this);
         }
         if (this._onclick && (model.click || model.hasEvent("beforeclick") || model.hasEvent("afterclick"))) {
-            if (control.un) control.un("onclick", this._onclick);
-            if (control.on) control.on("onclick", this._onclick, this);
+            if (control.un) control.un("click", this._onclick);
+            if (control.on) control.on("click", this._onclick, this);
         }
     }
     model.addListener(this);
@@ -3232,11 +3258,10 @@ cb.binding.ContainerBinding = function (mapping, parent) {
         if (!mapping)
             return;
         if (typeof mapping == "object") {
-            if (this._mapping.childMappings)
-                this._mapping.childMappings.removeData(mapping);
-            var index = this._childBindings.find(function () { return (this._mapping.controlId == mapping.controlId && this._mapping.propertyName == mapping.propertyName); });
-            this._childBindings.remove(index);
-            return;
+            if (cb.isArray(mapping))
+                this.removeMappings(mapping);
+            else
+                this.removeMapping(mapping);
         }
         else if (typeof mapping == "string") {
             var controlId = mapping;
@@ -3246,6 +3271,17 @@ cb.binding.ContainerBinding = function (mapping, parent) {
             var index = this._childBindings.find(function () { return (this._mapping.controlId == controlId); });
             this._childBindings.remove(index);
         }
+    }
+    this.removeMappings = function (mapping) {
+        for (var i = 0; i < mapping.length; i++) {
+            this.removeMapping(mapping[i]);
+        }
+    }
+    this.removeMapping = function (mapping) {
+        if (this._mapping.childMappings)
+            this._mapping.childMappings.removeData(mapping);
+        var index = this._childBindings.find(function () { return (this._mapping.controlId == mapping.controlId && this._mapping.propertyName == mapping.propertyName); });
+        this._childBindings.remove(index);
     }
     this.add = function (mapping) {
         if (arguments.length == 0)
@@ -3300,6 +3336,7 @@ cb.binding.ContainerBinding.create = function (viewId, viewModel, childMappings)
     var mapping = new cb.binding.Mapping(viewId, viewModel && viewModel.getModelName(), "view", childMappings);
     var containerBinding = new cb.binding.ContainerBinding(mapping);
     containerBinding.init();
+    cb.cache.bindings.set(viewId, containerBinding);
     return containerBinding;
     // }
 }
@@ -3456,7 +3493,7 @@ cb.util.getPopupZIndex = function () {
     return cb.cache.get("popupZIndex");
 };
 
-cb.QueryString = function (qs) {
+cb.util.queryString = function (qs) {
     //对href做特殊处理、对于单页面应用有些浏览器获取不到id、mode，暂时处理，后续通过页面参数传递方案改进
     if (qs && qs.indexOf("#") >= 0) {
         var urls = qs.split("#");
@@ -3501,6 +3538,31 @@ cb.QueryString = function (qs) {
         }
         return r;
     };
+};
+
+cb.util.confirmMessage = function (msg, okCallback, cancelCallback, context) {
+    new cb.controls.MessageBox({
+        "displayMode": "confirm",
+        "msg": msg,
+        "okCallback": okCallback,
+        "cancelCallback": cancelCallback,
+        "context": context
+    });
+};
+cb.util.warningMessage = function (title, msg, okCallback, context) {
+    new cb.controls.MessageBox({
+        "displayMode": "warning",
+        "title": title,
+        "msg": msg,
+        "okCallback": okCallback,
+        "context": context
+    });
+};
+cb.util.tipMessage = function (msg) {
+    new cb.controls.MessageBox({
+        "displayMode": "tip",
+        "msg": msg
+    });
 };
 
 cb.viewmodel = {};
@@ -3551,6 +3613,23 @@ cb.viewbinding.init = cb.viewbinding.create = function (viewId, viewModel, child
 
     return cb.binding.ContainerBinding.create(viewId, viewModel, childMappings);
 };
+cb.viewbinding.update = function (viewId) {
+    if (!viewId) return;
+    var containerBinding = cb.cache.bindings.get(viewId);
+    if (!containerBinding) return;
+    var childMappings = cb.getChildMappingsByView(viewId, containerBinding._viewModel);
+    cb.controls.createControls(childMappings);
+    containerBinding.add(childMappings);
+    cb.cache.mappings.set(viewId, childMappings);
+};
+cb.viewbinding.remove = function (viewId) {
+    if (!viewId) return;
+    var containerBinding = cb.cache.bindings.get(viewId);
+    if (!containerBinding) return;
+    var childMappings = cb.cache.mappings.get(viewId);
+    if (!childMappings) return;
+    containerBinding.remove(childMappings);
+};
 
 cb.getChildMappingsByView = function (viewId, viewModel) {
     var view = document.getElementById(viewId); // cb.getControl(viewId);
@@ -3581,7 +3660,9 @@ cb.getChildMappingsByView = function (viewId, viewModel) {
             elements[i].setAttribute(idTag, id);
             cb.console.log("cb.controls.createControlId(), id= " + id);
         }
-        mappings.push({ controlId: id, controlType: controlType, propertyName: propertyName });
+        if (cb.cache.controls.get(id)) continue;
+        var bindingMode = controlType === cb.ControlType.Button ? cb.binding.BindingMode.OneTime : cb.binding.BindingMode.TwoWay;
+        mappings.push({ controlId: id, controlType: controlType, propertyName: propertyName, bindingMode: bindingMode });
     }
     return mappings;
 }
@@ -3631,7 +3712,7 @@ cb.each = function (data, callback, scope) {
     }
 };
 cb.clone = function (obj) {
-    return Object.clone.call(obj);
+    return Object.clone(obj);
 };
 cb.ControlType = {
     TextBox: "TextBox",
@@ -3702,7 +3783,7 @@ cb.data.JsonSerializer = {
 
         return "\"" + attrValue + "\"";
     },
-    dserialize: function (data) {
+    deserialize: function (data) {
         if (!data) return null;
         data = this.uncompress(data); //解压成Json格式
         if (!data) return null;
@@ -3843,12 +3924,28 @@ cb.serialize.fromJson = function (json) {
 //#region rest
 cb.rest = {};
 cb.rest.temp = {};
-
-cb.rest.Application = {};
-cb.rest.Application.Context = {
-    Token: new cb.QueryString(location.search).get("token"),
-    ServiceUrl: location.protocol + "//" + location.host
-};
+cb.rest.ApplicationContext = {};
+if (window.localStorage) {
+    var userDataString = window.localStorage.getItem("userData");
+    if (userDataString) {
+        var userData = cb.data.JsonSerializer.deserialize(userDataString);
+        if (userData) {
+            for (var attr in userData) {
+                if (attr === "token")
+                    cb.rest.ApplicationContext["Token"] = userData[attr];
+                else
+                    cb.rest.ApplicationContext[attr] = userData[attr];
+            }
+        }
+    }
+    var deviceSize = window.localStorage.getItem("deviceSize");
+    if (deviceSize)
+        cb.rest.ApplicationContext["Size"] = deviceSize;
+}
+var queryString = new cb.util.queryString(location.search);
+cb.rest.ApplicationContext.Token = queryString.get("token") || cb.rest.ApplicationContext.Token;
+cb.rest.ApplicationContext.Size = queryString.get("size") || cb.rest.ApplicationContext.Size;
+cb.rest.ApplicationContext.ServiceUrl = location.protocol + "//" + location.host;
 
 //cb.ajax = function () { };
 //cb.ajax.RequestManager = {};
@@ -3867,6 +3964,26 @@ cb.rest.Application.Context = {
 //cb.http.HttpManager
 //cb.http.Ajax
 //cb.http.JsonP
+cb.rest.getToken=function(info)
+{
+     if(typeof(ua) != "undefined"){
+        if(ua=="iosApp"){
+
+            if(cb.rest.Application.Context.Token&&cb.rest.Application.Context.Token!=''){
+                document.location = "http:\\\getscanresult\\"+info +"◎◎◎"+ cb.rest.Application.Context.Token;
+            }else{
+                document.location = "http:\\\getscanresult\\"+info
+            }
+        }
+        if(ua=="andriodApp"){
+            if(cb.rest.Application.Context.Token&&cb.rest.Application.Context.Token!=''){
+                window.main.getscanresult(info,cb.rest.Application.Context.Token);
+            }else{
+                window.main.getscanresult(info,"");
+            }   
+        }
+     }
+}
 
 cb.rest.reLogin = function login(userCode,password,account) {
                         var account =account.split(",");
@@ -4045,7 +4162,7 @@ cb.rest.setLocalCache=function(ckey,localCacheData){
         //alert("查找到相应opation");
         var options = cb.rest.LocalCache.getValue(ckey);
         if(localCacheData && localCacheData.length>0){
-                var ajaxResult = cb.data.JsonSerializer.dserialize(localCacheData.substring(14));
+                var ajaxResult = cb.data.JsonSerializer.deserialize(localCacheData.substring(14));
                 if (ajaxResult.code >= 200 && ajaxResult.code <= 299){
                   if (ajaxResult.data) {
                       var isAlert = true;
@@ -4122,20 +4239,33 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
         if (xmlHttp.readyState != 4) //4 = "loaded"
             return;
          // 200 = OK
-        //alert(xmlHttp._url +"\n" + xmlHttp.status +"\n" xmlHttp.readyState);
+        //alert(xmlHttp._url +"\n"+ xmlHttp.readyState+"\n"+xmlHttp.status+"\n"+ xmlHttp.responseText+"\n"+cb.rest.userAgent);
         if (xmlHttp.status != 200 && xmlHttp._url &&!xmlHttp.responseText)
         {
            //若访问不成功
            //alert("获取不成功，开始调用本地资源");
            //if(cb.rest.userAgentInfo.userSystem=="ios"){
              //alert(cb.rest.userAgent);
-             if(cb.rest.userAgent && cb.rest.userAgent=="iosApp"){
+             if(cb.rest.userAgent && cb.rest.userAgent!=""){
                 cb.rest.LocalCacheKey = cb.rest.LocalCacheKey + 1;
                 cb.rest.LocalCache.add(cb.rest.LocalCacheKey,options);
                 //alert("添加成功");
                 var method = options.method || "get";
+
+                // if (String.equalsIgnoreCase("get", method)){
+                //    document.location = "http:\\\\getlocalcache\\"+xmlHttp._url + "◎◎◎"+ cb.rest.LocalCacheKey;
+                // } 
+
                 if (String.equalsIgnoreCase("post", method) || String.equalsIgnoreCase("put", method)){
-                   document.location = "http:\\\getlocalcache\\"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params)+"◎◎◎"+ cb.rest.LocalCacheKey;
+                    if(cb.rest.userAgent=="iosApp")
+                    {
+                        document.location = "http:\\\getlocalcache\\"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params)+"◎◎◎"+ cb.rest.LocalCacheKey;
+                    }
+                    if(cb.rest.userAgent=="androidApp")
+                    {
+                        window.main.dealocalcache("http://getlocalcache/"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params)+"◎◎◎"+ cb.rest.LocalCacheKey);
+                        //document.location = "http:\\\\getlocalcache\\"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params)+"◎◎◎"+ cb.rest.LocalCacheKey;
+                    }
                 } 
            }
             
@@ -4144,20 +4274,17 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
             cb.console.log("xmlHttp.responseText:", xmlHttp.responseText);
              //alert(xmlHttp._url+"\n" + options.method + "\n" +cb.data.JsonSerializer.serialize(options.params)+"\n"+ xmlHttp.responseText);
             var ajaxResult = null;
-            if(xmlHttp.status == 200){
-                ajaxResult = cb.data.JsonSerializer.dserialize(xmlHttp.responseText);
+            if(xmlHttp.responseText.substring(0,14)!="<U8LocalCache>"){
+                ajaxResult = cb.data.JsonSerializer.deserialize(xmlHttp.responseText);
               }else{
-                
-                ajaxResult = cb.data.JsonSerializer.dserialize(xmlHttp.responseText.substring(14));
-                                 
-              }
-                                  
+                ajaxResult = cb.data.JsonSerializer.deserialize(xmlHttp.responseText.substring(14));            
+              }              
             /*   新的前后端数据通信,根据后台定义的接口   */
             if (ajaxResult && ajaxResult.code != null) {
              //pad原地返回资源Code不可设置，用资源开头是否为<U8LocalCache>判断
               //cb.console.warn("------按新的数据通信格式进行数据传输---------is ok！", ajaxResult);
              if (ajaxResult.code >= 400) {
-                 return cb.console.error("Service error:"+xmlHttp.responseURL,ajaxResult);
+                 cb.console.error("Service error:"+xmlHttp.responseURL,ajaxResult);
                  alert(ajaxResult.error);
                   return;
                 }
@@ -4165,13 +4292,18 @@ cb.rest.AjaxRequestManager = cb.rest.ajax.XMLHttpRequestManager = {
                   if(xmlHttp.responseText && xmlHttp.responseText.substring(0,14)!="<U8LocalCache>")
                      {
                        var method = options.method || "get";
-                       //if(cb.rest.userAgentInfo.userSystem=="ios"){
-                        //alert(cb.rest.userAgent);
+                        //alert(cb.rest.userAgent + "," + method+","+xmlHttp._url);
                          if(cb.rest.userAgent && cb.rest.userAgent=="iosApp"){
-                             if (String.equalsIgnoreCase("get", method) || String.equalsIgnoreCase("delete", method))
+                             if (String.equalsIgnoreCase("get", method))
                                 document.location = "http:\\\savelocalcache\\"+xmlHttp.responseText+"◎◎◎"+xmlHttp._url;
                             else if (String.equalsIgnoreCase("post", method) || String.equalsIgnoreCase("put", method))
                                 document.location = "http:\\\savelocalcache\\"+xmlHttp.responseText+"◎◎◎"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params);
+                        }
+                        if(cb.rest.userAgent && cb.rest.userAgent=="androidApp"){
+                             if (String.equalsIgnoreCase("get", method))
+                                window.main.dealocalcache("http://savelocalcache/"+xmlHttp.responseText+"◎◎◎"+xmlHttp._url);
+                            else if (String.equalsIgnoreCase("post", method) || String.equalsIgnoreCase("put", method))
+                               window.main.dealocalcache("http://savelocalcache/"+xmlHttp.responseText+"◎◎◎"+xmlHttp._url +"◎◎◎"+ cb.data.JsonSerializer.serialize(options.params));
                         }
                       }
                     if (ajaxResult.data) {
@@ -4368,13 +4500,14 @@ cb.rest.getHtml = function (url, callback, params) {
     };
 };
 cb.rest._getUrl = function (restUrl, params) {
-    var _context = cb.rest.Application.Context;
+    var _context = cb.rest.ApplicationContext;
     var _token = _context.Token || "noToken";
+    var _size = _context.Size;
     if (_token && _token != "noToken") {
         if (restUrl.indexOf("?") < 0)
-            restUrl = restUrl + "?token=" + _token;
+            restUrl = restUrl + "?token=" + _token + "&size=" + _size;
         else
-            restUrl = restUrl + "&token=" + _token;
+            restUrl = restUrl + "&token=" + _token + "&size=" + _size;
     }
     //restUrl = (restUrl && restUrl.indexOf("?method=") < 0) ? (restUrl + "?token=" + _token) : (restUrl + "&token=" + _token);
     if (cb.data.isCompress())
@@ -4559,72 +4692,74 @@ cb.loader.loadView=function(el,url, params, callback){
 		cb.loader.loadViewCallback(responseText,el,callback);
 	}, params);
 };
-cb.loader.loadViewCallback = function(responseText,el,callback){
-        var emptyNode = document.createElement("div");
-        emptyNode.innerHTML = responseText;
-        var scripts = emptyNode.getElementsByTagName("script"); //emptyNode.querySelectorAll("script");
-        var scriptLength = scripts.length;
-        var node = null;
-        var scriptText = [];
-        var scriptUrls = [];
+cb.loader.loadViewCallback = function (responseText, el, callback) {
+    var emptyNode = document.createElement("div");
+    emptyNode.innerHTML = responseText;
+    var scripts = emptyNode.getElementsByTagName("script"); //emptyNode.querySelectorAll("script");
+    var scriptLength = scripts.length;
+    var node = null;
+    var scriptText = [];
+    var scriptUrls = [];
 
-        for (var i = 0; i < scripts.length; i++) {
-            node = scripts[i];
-            if (node.src && !this.hasScript(node.src)) {
-                var repeatSrc = false;
-                for (var j = 0; j < scriptUrls.length; j++) {
-                    if (scriptUrls[j] == node.src)
-                        repeatSrc = true;
-                }
-                if (!repeatSrc)
-                    scriptUrls.push(node.src);
+    for (var i = 0; i < scripts.length; i++) {
+        node = scripts[i];
+        if (node.type == "text/html") continue;
+        if (node.src && !this.hasScript(node.src)) {
+            var repeatSrc = false;
+            for (var j = 0; j < scriptUrls.length; j++) {
+                if (scriptUrls[j] == node.src)
+                    repeatSrc = true;
             }
-            else if (node.text)
-                scriptText.push(node.text);
+            if (!repeatSrc)
+                scriptUrls.push(node.src);
         }
-        for (var i = scripts.length - 1; i >= 0; i--) {
-            scripts[i].parentNode.removeChild(scripts[i]);   //emptyNode.removeChild(scripts[i]);//移除节点
-        }
+        else if (node.text)
+            scriptText.push(node.text);
+    }
+    for (var i = scripts.length - 1; i >= 0; i--) {
+        if (scripts[i].type == "text/html") continue;
+        scripts[i].parentNode.removeChild(scripts[i]);   //emptyNode.removeChild(scripts[i]);//移除节点
+    }
 
-        var links = emptyNode.getElementsByTagName("link"); //emptyNode.querySelectorAll("script");
-        var linkStr = "";
-        var head = document.head || document.getElementsByTagName("head")[0];
-        for (var i = 0; i < links.length; i++) {
-            if (!this.hasStyle(links[i].href)) 
-                head.appendChild(links[i].cloneNode()); //head.insertBefore(script, head.firstChild);
-        }
-        for (var i = links.length - 1; i >= 0; i--) {
-            links[i].parentNode.removeChild(links[i]);
-        }
+    var links = emptyNode.getElementsByTagName("link"); //emptyNode.querySelectorAll("script");
+    var linkStr = "";
+    var head = document.head || document.getElementsByTagName("head")[0];
+    for (var i = 0; i < links.length; i++) {
+        if (!this.hasStyle(links[i].href))
+            head.appendChild(links[i].cloneNode()); //head.insertBefore(script, head.firstChild);
+    }
+    for (var i = links.length - 1; i >= 0; i--) {
+        links[i].parentNode.removeChild(links[i]);
+    }
 
-        var titleNodes = emptyNode.getElementsByTagName("title");
-        var titleNode = titleNodes && titleNodes[0];
-        var title = "";
-        if (titleNode) {
-            var title = titleNode.text;
-            titleNode.parentNode.removeChild(titleNode);
-        }
-        var metas = emptyNode.getElementsByTagName("meta");
-        for (var i = metas.length - 1; i >= 0; i--) {
-            metas[i].parentNode.removeChild(metas[i]);
-        }
-        //document.title = title;
-        var application = emptyNode.getElementsByClassName("application")[0] || emptyNode;
+    var titleNodes = emptyNode.getElementsByTagName("title");
+    var titleNode = titleNodes && titleNodes[0];
+    var title = "";
+    if (titleNode) {
+        var title = titleNode.text;
+        titleNode.parentNode.removeChild(titleNode);
+    }
+    var metas = emptyNode.getElementsByTagName("meta");
+    for (var i = metas.length - 1; i >= 0; i--) {
+        metas[i].parentNode.removeChild(metas[i]);
+    }
+    //document.title = title;
+    var application = emptyNode.getElementsByClassName("application")[0] || emptyNode;
 
-		if(typeof el =="string")
-			el = document.getElementById(el);
-		if(el){
-			if(el.html)
-				el.html(linkStr + application.innerHTML);
-			else
-				el.innerHTML = linkStr + application.innerHTML;
-			//history.pushState({},title,url);
-			//cb.cache.controls.clear();
-			this.executeScript(scriptUrls,scriptText);
-		}
-		if(callback){
-			callback.call(el,responseText);
-		}
+    if (typeof el == "string")
+        el = document.getElementById(el);
+    if (el) {
+        if (el.html)
+            el.html(linkStr + application.innerHTML);
+        else
+            el.innerHTML = linkStr + application.innerHTML;
+        //history.pushState({},title,url);
+        //cb.cache.controls.clear();
+        if (callback) {
+            callback.call(el, responseText);
+        }
+        this.executeScript(scriptUrls, scriptText);
+    }
 };
 cb.loader.executeScript = function(scriptUrls,scriptText){
 	var cacheId="ScriptsLoaded_none";
@@ -4710,11 +4845,6 @@ cb.emptyNode = function (html) {
 };
 cb.getScript = cb.rest.loadScript;
 
-$.fn.loadView = function (url, params, callback) {
-	cb.loader.loadView(this,url, params, callback);//采用新的loadView方法
-};
-
-
 //导航
 //参数传递
 
@@ -4787,7 +4917,7 @@ Array.prototype.find = function (callback) {
     return -1;
 }
 Array.prototype.clone = function () {
-    return Object.clone.call(this);
+    return Object.clone(this);
 };
 Array.prototype.toJson = function () {
 
@@ -4854,26 +4984,36 @@ Date.prototype.format = function (fmt) {
 }
 //Object
 Object.clone = function (obj) {
-    if (arguments.length == 0)
-        obj = this;
-    var cloneData = null;
-    if (obj.constructor == Object)
-        cloneData = new obj.constructor();
-    else
-        cloneData = new obj.constructor(obj.valueOf());
-    for (var key in obj) {
-        if (cloneData[key] != obj[key]) {
-            if (typeof (obj[key]) == 'object') {
-                cloneData[key] = Object.clone.call(obj[key]);
-            }
-            else {
-                cloneData[key] = obj[key];
-            }
-        }
+    // Handle the 3 simple types, and null or undefined
+    if (null == obj || "object" != typeof obj) return obj;
+
+    // Handle Date
+    if (obj instanceof Date) {
+        var copy = new Date();
+        copy.setTime(obj.getTime());
+        return copy;
     }
-    cloneData.toString = obj.toString;
-    cloneData.valueOf = obj.valueOf;
-    return cloneData;
+
+    // Handle Array
+    if (obj instanceof Array) {
+        var copy = [];
+        for (var i = 0, len = obj.length; i < len; ++i) {
+            copy[i] = Object.clone(obj[i]);
+        }
+        return copy;
+    }
+
+    // Handle Object
+    if (obj instanceof Object) {
+        var copy = {};
+        for (var attr in obj) {
+            if (obj.hasOwnProperty(attr))
+                copy[attr] = Object.clone(obj[attr]);
+        }
+        return copy;
+    }
+
+    throw new Error("Unable to copy obj! Its type isn't supported.");
 };
 //#endregion
 
@@ -4892,7 +5032,7 @@ Object.clone = function (obj) {
             /// <returns type="">void</returns>
             if (!this._debug)
                 return;
-            this._internalLog.apply(this,[].slice.call(arguments,0));
+            this._internalLog(message, optionalParams);
         };
     }
     else {
@@ -5061,6 +5201,24 @@ window.onpopstate = function (e) {
     //return false;
 };
 
+// 浏览器关闭、刷新、回退、前进事件
+window.onbeforeunload = function () {
+    var tip = "该操作将会导致“打开的页签关闭”或“操作的数据丢失”，您是否确认？";
+    var evt = window.event || arguments[0];
+    var userAgent = navigator.userAgent;
+    if (userAgent.indexOf("MSIE") > 0) {
+        var n = window.event.screenX - window.screenLeft;
+        var b = n > document.documentElement.scrollWidth - 20;
+        if (b && window.event.clientY < 0 || window.event.altKey) {
+            window.event.returnValue = tip;
+        } else {
+            return tip;
+        }
+    } else if (userAgent.indexOf("Chrome") > 0) {
+        return tip;
+    }
+};
+
 cb.route.showPopup = function (route, params) {
     this.setParams(route, params);
     cb.controls.Popup.show(route, params);
@@ -5072,60 +5230,6 @@ cb.route.showDialog = function (route, params) {
 cb.route.showPanel = function (route, params) {
     this.setParams(route, params);
     cb.controls.Panel.show(route, params);
-};
-cb.route.loadViewPart = function (viewPart, route, params) {
-    var actionId = cb.cache.get("clickElement");
-    if (!actionId) {
-        cb.console.error("actionId为空");
-        return;
-    }
-    var items = viewPart.split(".");
-    if (items.length === 0 || items.length > 2) {
-        cb.console.error("viewPart格式有错");
-        return;
-    }
-    var $viewPart;
-    if (items.length === 2) $viewPart = $("." + items[0] + " ." + items[1]);
-    else $viewPart = $("." + items[0]);
-    if (!$viewPart.length) return;
-
-    /*var viewParts = cb.cache.get("viewParts");
-    if (!viewParts) viewParts = {};
-    var viewPartLoaded = false;
-    for (var index in viewParts) {
-    if (index === viewPart && viewParts[index] === route) {
-    viewPartLoaded = true;
-    break;
-    }
-    }
-    if (!viewPartLoaded) {
-    viewParts[viewPart] = route;
-    cb.cache.set("viewParts", viewParts);
-    var pageUrl = cb.route.getPageUrl(route);
-    $viewPart.loadView(pageUrl);
-    }*/
-
-    var actionIds = cb.cache.get("actionIds");
-    if (!actionIds) actionIds = {};
-    var viewPartLoaded = false;
-    for (var index in actionIds) {
-        if (index === actionId && actionIds[index] === true) {
-            viewPartLoaded = true;
-            break;
-        }
-    }
-    if (!viewPartLoaded) {
-        actionIds[actionId] = true;
-        cb.cache.set("actionIds", actionIds);
-        var pageUrl = cb.route.getPageUrl(route);
-        $viewPart.loadView(pageUrl);
-    }
-    setTimeout(function () {
-        var animation = params && params["animation"];
-        if (!animation) return;
-        var animationMode = animation["mode"];
-        if (animationMode && $viewPart[animationMode]) $viewPart[animationMode](animation["duration"], animation["params"]);
-    }, 100);
 };
 cb.route.getHomepageUrl = function (queryString) {
     if (!queryString) queryString = {};
@@ -5153,7 +5257,7 @@ cb.route.getHomepageUrl = function (queryString) {
 cb.route.getPageUrl = function (pageRoute, queryString) {
     if (!queryString)
         queryString = {};
-    var queryStringParent = new cb.QueryString(location.href);
+    var queryStringParent = new cb.util.queryString(location.search);
     if (queryStringParent) {
         queryString.remote = queryString.remote || queryStringParent.get("remote");       //调试用,远程加载
         queryString.transfer = queryString.transfer || queryStringParent.get("transfer"); //调试用,重新从模版生成
@@ -5182,6 +5286,20 @@ cb.route.getPageUrl = function (pageRoute, queryString) {
         if (queryString[attr] != null)
             pageUrl += "&" + attr + "=" + queryString[attr];
     return pageUrl;
+};
+cb.route.getAppParamsFromMenu = function (menu) {
+    if (!menu || !menu.url) return {};
+    var queryString = new cb.util.queryString(menu.url);
+    var params = { params: {} };
+    for (var attr in queryString.p) {
+        if (attr === "app")
+            params.appId = queryString.p[attr];
+        else
+            params.params[attr] = queryString.p[attr];
+    }
+    if (menu["displayName"])
+        params.params["title"] = menu["displayName"];
+    return params;
 };
 cb.route.ShowPageByJson = function (pageRoute, params, pageType) {
     this.setParams(pageRoute, params);
@@ -5228,8 +5346,11 @@ cb.controls.createControls = function (mappings) {
     if (!mappings || !mappings.length)
         return;
     var length = mappings.length;
+    var control;
     for (var i = 0; i < length; i++) {
-        cb.controls.create(mappings[i].controlType, mappings[i].controlId, { propertyName: mappings[i].propertyName });
+        control = cb.controls.create(mappings[i].controlType, mappings[i].controlId, { propertyName: mappings[i].propertyName });
+        if (control && control.controlType && mappings[i].controlType != control.controlType)
+            mappings[i].controlType = control.controlType;
     }
 };
 

@@ -578,7 +578,10 @@ $.extend(cb.model.Model3D.prototype,{
 		return this.get(rowIndex, cellName, propertyName);
 	},
 	getReadOnly:function (rowIndex, cellName) {//行字段的可编辑行收行和列的可编辑状态影响。
-		return arguments.length!=2?this.get(rowIndex, cellName, "readOnly"):(this.get(rowIndex,'readOnly')||this.get(cellName,'readOnly')||this.get(rowIndex, cellName, "readOnly"));
+		return arguments.length!=2?this.get(rowIndex, cellName, "readOnly")||this.get(rowIndex, cellName, "alwaysReadOnly"):
+		this.get(rowIndex,'readOnly')||this.get(rowIndex,'alwaysReadOnly')||
+		this.get(cellName,'readOnly')||this.get(cellName,'alwaysReadOnly')
+		this.get(rowIndex, cellName, "readOnly")||this.get(rowIndex, cellName, "alwaysReadOnly");
 	},
 	setReadOnly:function (rowIndex, cellName, value) {
 		if (arguments.length == 0)

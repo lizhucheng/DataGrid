@@ -152,7 +152,7 @@ var columns={
 	billno:{title:"单据号",length:50,ctrlType:"TextBox",owner:"somain 订单主表"},
 	vtrantypecode:{title:"单据类型编码",length:50,ctrlType:"TextBox",owner:"somain 订单主表"},
 	vtrantype:{title:"订单类型",length:20,refKey:"pk_billtypeid",refCode:"pk_billtypecode",refName:"billtypename",ctrlType:"Refer",refId:"4848",refShowMode:"Name",owner:"somain 订单主表"},
-	billdate:{title:"单据日期",nullable:false,ctrlType:"TextBox",owner:"somain 订单主表"},
+	billdate:{title:"单据日期",nullable:false,ctrlType:"DateTimeBox",owner:"somain 订单主表"},
 	busitype:{title:"业务流程",length:20,refKey:"pk_busitype",refCode:"busicode",refName:"businame",ctrlType:"Refer",refId:"4849",refShowMode:"Name",owner:"somain 订单主表"},
 	pk_group:{title:"集团",length:20,nullable:false,refKey:"pk_group",refCode:"code",refName:"name",ctrlType:"Refer",refId:"600001",refShowMode:"Name",owner:"somain 订单主表"},
 	pk_org:{title:"组织",length:20,refKey:"pk_org",refCode:"code",refName:"name",ctrlType:"Refer",refId:"600015",refShowMode:"Name",owner:"somain 订单主表"},

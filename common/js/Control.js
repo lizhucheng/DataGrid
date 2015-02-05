@@ -28,7 +28,7 @@ cb.controls.widget("Control", function (controlType) {
     var control = function (id, options) {
         var _data = options || {};
         _data.id = id;
-        
+
         if (typeof (id) == "string") {
             _data.elem = $("#" + id);
         }
@@ -44,6 +44,7 @@ cb.controls.widget("Control", function (controlType) {
             _data[attr] = val;
         };
     };
+    cb.extend(control.prototype, cb.events);
     control.prototype.controlType = controlType;
     control.prototype.controlTypeTag = "data-controlType";
     control.prototype.propertyNameTag = "data-propertyname";
@@ -89,7 +90,7 @@ cb.controls.widget("Control", function (controlType) {
         //this.setAttribute("disabled", readonly === true ? "disabled" : false);
     };
     control.prototype.setAlwaysReadOnly = function (val) {
-       // debugger;
+        // debugger;
         //this.getElement().css("border", "1px solid #cccccc");
     };
     control.prototype.getDisabled = function () {
@@ -132,25 +133,11 @@ cb.controls.widget("Control", function (controlType) {
         labelObj.toggleClass("mustinput-noinput", val);
         divObj.toggleClass("parentdiv-noinput", val);
     };
-    control.prototype.on = function (eventName, func, context) {
-        if (eventName.indexOf("on") == 0)
-            eventName = eventName.substr(2);
-        var me = this;
-        //var data = { me: this, context: context };
-        this.getElement().on(eventName, function () {
-            func.call(context, me.getValue());
-        });
-    };
-    control.prototype.un = function (eventName, func) {
-        if (eventName.indexOf("on") == 0)
-            eventName = eventName.substr(2);
-        this.getElement().unbind(eventName);
-    };
 
     //fengwba 0825
     //设置提示信息Tips
     control.prototype.setTips = function (val) {
-        supportPlaceholder = 'placeholder' in document.createElement('input');//检测浏览器是否兼容placeholder
+        supportPlaceholder = 'placeholder' in document.createElement('input'); //检测浏览器是否兼容placeholder
         var self = this;
         if (!supportPlaceholder) {
             this.getElement().focus(function () {

@@ -60,18 +60,60 @@ var TextBoxEditor=$.extend({},Editor,{
 		this.target.focus();
 		//根据配置信息初始化editor
 	}
+	
 });
 var DefaultEditor=TextBoxEditor;
 
 var ComboxEditor=$.extend({},Editor,{
-
+	init: function(container, options){
+		if(!this.el){
+			this.el=$('<div class="cellEdtior DateTimeEditor"><div class="ui-field-contain"><div  data-controltype="ComboBox" ><input type="text" /></div></div></div>').appendTo(container)[0];
+			this.target=new cb.controls['ComboBox']($(this.el).find('[data-controltype=ComboBox]'));
+			this.target.setDataSource(options.dataSource);
+			//时间处理
+		}else{
+			container.appendChild(this.el);
+		}
+		options=options||{};
+		if(options.length){
+			
+		}
+		this.target.getElement().trigger('click');
+		//根据配置信息初始化editor
+	},
+	getValue: function(){
+		return this.target.getValue();
+	},
+	setValue: function(value){
+		this.target.setValue(value);
+	}
 });
 
 var NumberBoxEditor=$.extend({},Editor,{
 
 });
 var DateTimeEditor=$.extend({},Editor,{
-
+	init: function(container, options){
+		if(!this.el){
+			this.el=$('<div class="cellEdtior DateTimeEditor"><div><input data-controltype="DateTimeBox" /></div></div>').appendTo(container)[0];
+			this.target=new cb.controls['DateTimeBox']($(this.el).find('input'));
+			//时间处理
+		}else{
+			container.appendChild(this.el);
+		}
+		options=options||{};
+		if(options.length){
+			
+		}
+		this.target.getElement().trigger('focus');
+		//根据配置信息初始化editor
+	},
+	getValue: function(){
+		return this.target.getValue();
+	},
+	setValue: function(value){
+		this.target.setValue(value);
+	}
 });
 var ReferEditor=$.extend({},Editor,{
 

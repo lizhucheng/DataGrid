@@ -41,10 +41,10 @@ var ctrlFormatterMap={
 var ctrlEditorMap={
 	'CheckBox':'CheckboxEditor',
 	'TextBox':'TextBoxEditor',
-	'DateTimeBox':'DateTimeFormatter',
+	'DateTimeBox':'DateTimeEditor',
 	'NumberBox':'NumberBoxEditor',
 	'ComboBox':'ComboxEditor',
-	'Refer':'ReferFormatter'
+	'Refer':'ReferEditor'
 };
 //定义Column类型是为了管理列的默认值
 function Column(config,name){	
@@ -237,7 +237,7 @@ DataGrid.prototype={
 		this.render(opts.rows);
 		
 		if(this.editable&&this.editMode=='CellEditor'&&!this.editors){
-			this._cellEditors=$.extend(true,DataGrid.cellEditors);//创建每种类型的编辑器实例;//避免被模型中的属性覆盖，加_;
+			this._cellEditors=$.extend(true,{},DataGrid.cellEditors);//创建每种类型的编辑器实例;//避免被模型中的属性覆盖，加_;
 		}
 	},
 	//只设置状态，不改变视图
@@ -540,7 +540,8 @@ DataGrid.prototype={
 		}
 		
 		//点击行时，行获得焦点
-		this.$el.on('click','.viewBody tr',function(evt){
+		this.$el.on('click','.viewBody tr[data-role=row]',function(evt){
+				if($(evt.target).closest('.cellEditorWrapper').length)return;
 				var row=$(this).closest('tr')[0],
 					rows=dg._getRows(),
 					index=rows.indexOf(row);
@@ -548,6 +549,7 @@ DataGrid.prototype={
 			});
 		//点击单元格
 		this.$el.on('click','.viewBody .field',function(evt){
+			if($(evt.target).closest('.cellEditorWrapper').length)return;
 			var field=$(this).data('field');
 			var rowIndex=$(this.parentNode).index();
 			//处理之前编辑的单元格
@@ -811,7 +813,7 @@ DataGrid.prototype={
 		var frozenIndex=this.frozenIndex;
 		for(var s=0,len=data.length;s<len;s++){
 			row=data[s];
-			arr[j++]='<tr>';	
+			arr[j++]='<tr data-role="row">';	
 			for(i=0;i<colCount;i++){
 				field=cols[i][FIELDNAME_PROP];
 				if(field!=DataGrid.ROWNOCOL[FIELDNAME_PROP]&&field!=DataGrid.CHECKBOXCOL[FIELDNAME_PROP]){
@@ -1096,7 +1098,7 @@ DataGrid.prototype={
 			//当鼠标在编辑器外点击时，触发提交修改
 			/*
 			$(document).click(function(evt){
-				if($(evt.target).parents().has(dg.cellEditorWrapper))return;
+				if($(evt.target).closest('.cellEditorWrapper').length)return;
 				var currentValue=dg._currentEditor.getValue();
 				if(currentValue!==dg._currentEditor.initValue){
 					//尝试修改model
@@ -1106,7 +1108,9 @@ DataGrid.prototype={
 			});
 			
 			*/
-			$(this.cellEditorWrapper).on('click',function(evt){evt.stopPropagation()});
+			$(this.cellEditorWrapper).on('click',function(evt){
+				evt.stopPropagation()
+			});
 		}
 		var col=this.getColumn(field);
 		var container=this._getEditorContainer(rowIndex,field);
@@ -1114,7 +1118,9 @@ DataGrid.prototype={
 		this._currentEditor=this._getFieldEditor(col,dataContext);//保存对编辑器的引用
 		//隐藏内容
 		$(container).closest('td').children('.cellContent').css('visibility','hidden');
-		this._currentEditor.init(this.cellEditorWrapper.rows[0].cells[0],col);
+		var td=this.cellEditorWrapper.rows[0].cells[0];
+		td.innerHTML='';
+		this._currentEditor.init(td,col);
 		this._currentEditor.initValue=dataContext[field];
 		this._currentEditor.setValue(dataContext[field]);
 		this._editingField=field;

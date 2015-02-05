@@ -41,6 +41,7 @@ function NumberFormatter(value,dataContext){//scale:小数位数，precision：�
 //
 function DateTimeFormatter(value,dataContext){
 	if(value==undefined)return '';
+	return value;
 }
 //引用数据的格式化时，数据来自dataContext 中的{refKey}_{refCode}，{refKey}_{refName},refShowMode决定是显示{refKey}_{refCode}值还是{refKey}_{refName}属性值,value为refKey
 function ReferFormatter(value,dataContext){//length:20,refKey:"id",refCode:"code",refName:"name",ctrlType:"Refer",refId:"Computation",refShowMode:"Code"

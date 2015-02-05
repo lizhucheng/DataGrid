@@ -1,0 +1,1098 @@
+﻿/****************DropDownList 样式 Start***********************/
+.cube-main div[data-controltype='DropDownList'] {
+    width: 400px;
+    min-width: 130px;
+    height: 45px;
+    border: 1px solid red;
+    background: #E4E4E4;
+    margin: 0 auto;
+}
+
+    .cube-main div[data-controltype='DropDownList'].cube-control-header {
+        background: #FFF;
+    }
+
+    .cube-main div[data-controltype='DropDownList'] .cube-control-content {
+        height: 30px;
+        width: 97%;
+        line-height: 30px;
+        border-radius: 4px;
+        background-color: white;
+        margin: 7px 0 5px 5px;
+        cursor: pointer;
+    }
+
+        .cube-main div[data-controltype='DropDownList'] .cube-control-content > span:first-child {
+            float: left;
+            width: 70%;
+            text-align: center;
+            font-family: '微软雅黑 Regular', '微软雅黑';
+            font-size: 14px;
+        }
+
+        .cube-main div[data-controltype='DropDownList'] .cube-control-content > span:last-child {
+            float: right;
+            background: url(../images/control/dropdown.png);
+            width: 13px;
+            height: 13px;
+            margin: 10px;
+        }
+
+    .cube-main div[data-controltype='DropDownList'].cube-control-header .cube-control-content > span:first-child {
+        font-size: 18px;
+    }
+
+    .cube-main div[data-controltype='DropDownList'].cube-control-header .cube-control-content > span:last-child {
+        float: right;
+        background: url(../images/control/dropdown_head.png);
+        width: 12px;
+        height: 8px;
+        margin: 10px;
+    }
+/****************DropDownList 样式 End***********************/
+
+/****************SearchBox 样式 Start***********************/
+.cube-main .cube-main-header div[data-controltype='SearchBox'] {
+    float: left;
+    width: 260px;
+    min-width: 260px;
+    height: 30px;
+    margin-top: 10px;
+    background: #FFF;
+    border-radius: 25px;
+    -moz-border-radius: 25px;
+}
+
+    .cube-main .cube-main-header div[data-controltype='SearchBox'] .search-icon {
+        background: url(../images/search2.png);
+        float: right;
+        width: 16px;
+        height: 16px;
+        margin-top: 6px;
+        margin-right: 10px;
+        cursor: pointer;
+    }
+
+    .cube-main .cube-main-header div[data-controltype='SearchBox'] input {
+        width: 78%;
+        min-width: 200px;
+        border: none;
+        height: 23px;
+        margin-top: 3px;
+        margin-left: 25px;
+    }
+
+        .cube-main .cube-main-header div[data-controltype='SearchBox'] input:focus {
+            outline: none;
+        }
+
+.cube-header-tool div[data-controltype='SearchBox'] {
+    width: 20%;
+    min-width: 190px;
+    border: 1px solid #D7D7D7;
+    float: left;
+    background-color: transparent;
+    height:30px;
+    margin: 4px 0 0 0;
+}
+
+.ui-head-content div[data-controltype='SearchBox'],
+.common-list.ui-content div[data-controltype='SearchBox'] {
+    width: 57%;
+    min-width: 240px;
+    height: 30px;
+    border: 1px solid #D7D7D7;
+    float: left;
+    background-color: transparent;
+    /*margin-top: 15px;*/
+}
+
+.cube-header-tool div[data-controltype='SearchBox'] input{
+  border: none;
+width: 83%;
+height: 100%;
+float: left;
+margin: 0 0 0 10px;
+}
+
+.ui-head-content div[data-controltype='SearchBox'] > input,
+.common-list.ui-content div[data-controltype='SearchBox'] input {
+    border: none;
+    width: 90%;
+    height: 100%;
+    float: left;
+}
+
+    .cube-header-tool div[data-controltype='SearchBox'] input:focus,
+    .ui-head-content div[data-controltype='SearchBox'] > input:focus,
+    .common-list.ui-content div[data-controltype='SearchBox'] input:focus {
+        outline: none;
+    }
+
+.cube-header-tool div[data-controltype='SearchBox'] span,
+.ui-head-content div[data-controltype='SearchBox'] > span,
+.common-list.ui-content div[data-controltype='SearchBox'] >span {
+    content: url(../images/search2.png);
+    cursor: pointer;
+    padding: 6px 2px;
+}
+/****************SearchBox 样式 End***********************/
+
+
+/****************工作流状态控件 样式 Start***********************/
+.cube-main div[data-controltype='ProcessBar'] {
+    width: 85%;
+    height: 400px;
+    margin: 0 auto;
+}
+
+    .cube-main div[data-controltype='ProcessBar'] > div {
+        display: none;
+        position: absolute;
+        left: 24%;
+        width: 360px;
+        height: 150px;
+    }
+
+    .cube-main div[data-controltype='ProcessBar'] li {
+        list-style: none;
+        width: 100%;
+        height: 70px;
+    }
+
+        .cube-main div[data-controltype='ProcessBar'] li .part-item {
+            width: 100%;
+            height: 70px;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left,
+        .cube-main div[data-controltype='ProcessBar'] li div .part-right {
+            float: left;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left {
+            width: 70px;
+            line-height: 70px;
+        }
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-left > div {
+                float: left;
+            }
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-left .ui-text {
+                font-family: '微软雅黑 Regular', '微软雅黑';
+                font-weight: 400;
+                font-style: normal;
+                font-size: 14px;
+                color: #999;
+                width: 50px;
+                text-align: center;
+            }
+
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-left > div:last-child {
+                float: right;
+                width: 10px;
+                height: 10px;
+                background-color: #E4E4E4;
+                border-radius: 25px;
+                margin-top: 25px;
+                margin-right: -6px;
+            }
+
+        .cube-main div[data-controltype='ProcessBar'] li:first-of-type .part-left > div:last-child,
+        .cube-main div[data-controltype='ProcessBar'] li:last-child .part-left > div:last-child {
+            width: 15px;
+            height: 15px;
+            margin-right: -8px;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left.submit > div:last-child {
+            background-color: #157DFB;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left.agree > div:last-child {
+            background-color: #009900;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left.refuse > div:last-child {
+            background-color: #FF0000;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left.submit .ui-text {
+            color: #157DFB;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left.agree .ui-text {
+            color: #009900;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-left.refuse .ui-text {
+            color: #FF0000;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li div .part-right {
+            width: 85%;
+            height: 70px;
+        }
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-right > div {
+                height: 35px;
+                line-height: 35px;
+            }
+
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-right .ui-text {
+                width: 85%;
+                font-family: '微软雅黑 Regular', '微软雅黑';
+                font-weight: 400;
+                font-style: normal;
+                font-size: 14px;
+                color: #999;
+                padding-left: 80px;
+                text-align: left;
+            }
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-right img {
+                float: left;
+                width: 50px;
+                height: 50px;
+                margin-left: 15px;
+                margin-top: 10px;
+                cursor: pointer;
+            }
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-right .ui-text > span:first-child {
+                font-family: '微软雅黑 Bold', '微软雅黑';
+                font-weight: 700;
+                color: #157DFB;
+            }
+
+            .cube-main div[data-controltype='ProcessBar'] li div .part-right .ui-text > span:last-child {
+                color: #333333;
+            }
+
+        .cube-main div[data-controltype='ProcessBar'] li .part-item .part-right > div {
+            border-left: 1px solid #E4E4E4;
+        }
+
+        .cube-main div[data-controltype='ProcessBar'] li:first-of-type .part-item .part-right > div:first-of-type,
+        .cube-main div[data-controltype='ProcessBar'] li:last-child .part-item .part-right > div:last-child {
+            border-left: none;
+        }
+/****************工作流状态控件 样式 End***********************/
+
+/****************PC DropDownButton 样式 Start*********************/
+.cube-main div[data-controltype='DropDownButton'],
+.cube-main div[data-controltype='DropDownButton'] .dropbutton-title {
+    width: 45px;
+    height: 55px;
+    line-height: 19px;
+    text-align: center;
+    cursor: pointer;
+}
+
+    .cube-main div[data-controltype='DropDownButton'] span,
+    .cube-main div[data-controltype='DropDownButton'] .dropbutton-item {
+        font-family: '微软雅黑 Regular', '微软雅黑';
+        font-weight: 400;
+        font-style: normal;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .cube-main  div[data-controltype='DropDownButton'] .dropbutton-item {
+        display:none;
+        position: absolute;
+        width: 158px;
+        height: 200px;
+        color: #333;
+        text-align: left;
+        background: #FFF;
+        border: 1px solid #CCC;
+        box-shadow: 2px 2px 2px #CCC;
+        z-index: 1000;
+    }
+
+        .cube-main div[data-controltype='DropDownButton'] .dropbutton-item li {
+            width: 155px;
+            height: 35px;
+            line-height: 35px;
+            padding-left: 15px;
+            margin:0;
+            list-style: none;
+        }
+
+            .cube-main div[data-controltype='DropDownButton'] .dropbutton-item li:hover,
+            .cube-main div[data-controltype='DropDownButton'] .dropbutton-item li.active {
+                background: #73DCFF;
+            }
+/****************PC DropDownButton 样式 End***********************/
+
+/****************label 样式 Start***********************/
+ .ui-query-content .cube-detail-content .ui-field-contain label,
+    .ui-query-content .ui-field-contain label,
+    .cube-content-content .cube-detail-content .ui-field-contain label {
+font-size: 14px;
+font-family: 宋体;
+font-weight:400;
+color: #666666;
+text-align: left;
+text-decoration: none;
+white-space: nowrap;
+vertical-align: middle;
+overflow: hidden;
+text-overflow: ellipsis;
+padding: 0.2em 0 .3em 0;
+padding-right: 5px;
+}
+/****************label 样式 End***********************/
+
+/****************NumberBox 样式 Start***********************/
+ .ui-query-content .cube-detail-content .ui-field-contain input[data-controltype='NumberBox'],
+ .ui-query-content .ui-field-contain input[data-controltype='NumberBox'],
+ .cube-content-content .cube-detail-content .ui-field-contain input[data-controltype='NumberBox'] {
+   background-color: #FFFFFF;
+    background-image: none;
+    /*
+    border: 1px solid #CCCCCC;
+        
+        */
+    border:none;
+    border-radius: 4px;
+	-webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+        /*
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+
+        
+        */
+    color: #555555;
+    display: inline;
+    font-size: 14px;
+    height: 34px;
+    line-height: 1.42857;
+    padding: 6px 12px;
+    transition: border-color 0.15s ease-in-out 0s, box-shadow 0.15s ease-in-out 0s;
+    vertical-align: middle;
+    width: 100%;
+}
+.numberBox-focus,.cube-main input[data-controltype='NumberBox']:focus{
+    border-color: #66AFE9;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(102, 175, 233, 0.6);
+    outline: 0 none;
+}
+
+.cube-main input[data-controltype='NumberBox']:-moz-placeholder {
+    color: #999999;
+}
+.cube-main input[data-controltype='NumberBox']::-moz-placeholder {
+    color: #999999;
+    opacity: 1;
+}
+.numberBox-underline
+{
+    border: 0;
+    border-bottom: 1px solid black;
+    display: inline-block;
+    height: 34px;
+    width: 206px;
+    line-height: 34px;
+    color: black;
+    vertical-align: middle;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+ .ui-query-content .cube-detail-content .ui-field-contain input[data-controltype='NumberBox'][readonly],
+ .ui-query-content .ui-field-contain input[data-controltype='NumberBox'][readonly],
+ .cube-content-content .cube-detail-content .ui-field-contain input[data-controltype='NumberBox'][readonly]
+{
+    cursor: auto;
+    background-color: #ffffff;
+    border:1px solid #ffffff;
+}
+.ui-query-content .cube-detail-content .ui-field-contain input[data-controltype='NumberBox'][disabled],
+.ui-query-content .ui-field-contain input[data-controltype='NumberBox'][disabled],
+.cube-content-content .cube-detail-content .ui-field-contain input[data-controltype='NumberBox'][disabled]
+{
+    border:1px solid #ffffff;
+    cursor: not-allowed;
+    background-color: #ffffff;
+}
+   
+/****************NumberBox 样式 End***********************/
+
+
+/****************ComboBox 样式 Start***********************/
+.ui-field-contain div[data-controltype='ComboBox']{
+    background:url("../images/dropdown.gif") no-repeat scroll 98% center;
+    position:relative;
+	min-width:100px;
+	min-height:16px;
+}
+
+ 
+.ui-field-contain div[data-controltype='ComboBox']>div{
+      width: 100%;
+    height: 24px;
+    outline: none;
+    -webkit-appearance: inherit;
+    border: none;
+    background: none;
+}
+.ui-field-contain div[data-controltype='ComboBox']>div>span{
+display:block;
+padding:7px 5px 5px;
+}
+    .ui-field-contain div[data-controltype='ComboBox'] > ul {
+      list-style: none;
+      background-color:#fff;
+      border:1px solid #cdcdcd;
+      position:absolute;
+      top:32px;
+      left:0;
+      width:100%;
+      padding:0px;
+      margin:0px;
+      z-index: 1000;
+    }
+      .ui-field-contain div[data-controltype='ComboBox'] > ul>li {
+      
+    }
+            .ui-field-contain div[data-controltype='ComboBox'] > ul>li:hover {
+                    background: #339EE2;
+          color: #FFF;
+    }
+     .ui-field-contain div[data-controltype='ComboBox'] > ul>li>img {
+         height:20px;
+         width:20px;
+    }
+    .ui-field-contain div[data-controltype='ComboBox'] > ul>li.checked {
+          background: #339EE2;
+          color: #FFF;
+    }
+.ui-field-contain div[data-controltype='ComboBox'][readonly] >div[readonly]
+{
+    color:#000000;
+
+    cursor: auto;
+    background-color: #ffffff;
+    border:1px solid #ffffff;
+}
+.ui-field-contain div[data-controltype='ComboBox'][disabled] >div[disabled]
+{
+    border:1px solid #ffffff;
+    cursor: pointer;
+    color:#000000;
+    background-color: #ffffff;
+}
+
+   
+/****************ComboBox 样式 End***********************/
+
+/****************TextBox 样式 Start***********************/
+.ui-field-contain input[data-controltype='TextBox']{
+  background-color: #FFFFFF;
+    background-image: none;
+    border: 1px solid #ffffff;
+        -webkit-border-radius: 4px;
+        -moz-border-radius: 4px;
+        border-radius: 4px;    
+    /*box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;*/
+    color: #000000;
+    display: inline;
+    font-size: 14px;
+    height: 34px;
+    line-height: 1.42857;
+    padding: 6px 12px;
+    transition: border-color 0.15s ease-in-out 0s, box-shadow 0.15s ease-in-out 0s;
+    vertical-align: middle;
+    text-align: left;
+    width: 100%;
+    font-weight: 400; 
+}
+.textBox-focus,.cube-main input[data-controltype='TextBox']:focus{
+    border-color: #66AFE9;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(102, 175, 233, 0.6);
+    outline: 0 none;
+}
+
+.cube-main input[data-controltype='TextBox']:-moz-placeholder {
+    color: #999999;
+}
+.cube-main input[data-controltype='TextBox']::-moz-placeholder {
+    color: #999999;
+    opacity: 1;
+}
+.textBox-underline
+{
+    border: 0;
+    border-bottom: 1px solid black;
+    display: inline-block;
+    height: 34px;
+    width: 206px;
+    line-height: 34px;
+    color: black;
+    vertical-align: middle;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.ui-field-contain input[data-controltype='TextBox'][readonly]
+{
+    cursor: auto;
+    background-color: #ffffff;
+    border:1px solid #ffffff;
+}
+.ui-field-contain input[data-controltype='TextBox'][disabled]
+{
+    border:1px solid #ffffff;
+    cursor: not-allowed;
+    background-color: #ffffff;
+}
+   
+/****************TextBox 样式 End***********************/
+
+/****************DataTimebox 样式 Start***********************/
+.ui-field-contain input[data-controltype='DateTimeBox'] {
+   /*border: 1px solid #ddd;*/
+    border: 1px solid #ffffff;	
+    background: url(iconDate.gif) 98% 50% no-repeat #ffffff;
+	/*background-color: #FFFFFF;*/	
+    border-radius: 4px;
+    /*
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+        */
+	color: #555555;
+    display: inline;
+    font-size: 14px;
+    height: 34px;
+    line-height: 1.42857;
+    padding: 6px 12px;
+    transition: border-color 0.15s ease-in-out 0s, box-shadow 0.15s ease-in-out 0s;
+    vertical-align: middle;
+    width: 100%;
+    cursor: pointer;
+}
+.ui-field-contain > div[data-controltype='DateTimeBox'] > div{
+        width:8%;
+        float:right;
+        cursor:pointer;
+        text-align:center;
+        display:block;
+    }
+.textBox-focus,.cube-main input[data-controltype='DateTimeBox']:focus{
+    border-color: #66AFE9;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(102, 175, 233, 0.6);
+    outline: 0 none;
+}
+
+.cube-main input[data-controltype='DateTimeBox']:-moz-placeholder {
+    color: #999999;
+}
+.cube-main input[data-controltype='DateTimeBox']::-moz-placeholder {
+    color: #999999;
+    opacity: 1;
+}
+.textBox-underline
+{
+    border: 0;
+    border-bottom: 1px solid black;
+    display: inline-block;
+    height: 34px;
+    width: 206px;
+    line-height: 34px;
+    color: black;
+    vertical-align: middle;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.ui-field-contain input[data-controltype='DateTimeBox'][readonly]
+{
+    border:1px solid #ffffff;
+    cursor: pointer;
+    background-color: #ffffff;
+    color:#000000;
+}
+.ui-field-contain input[data-controltype='DateTimeBox'][disabled]
+{
+    border:1px solid #ffffff;
+    cursor: pointer;
+    background-color: #ffffff;
+    background: none;
+}
+   .ui-field-contain > div[data-controltype='DateTimeBox'][readonly] > div,
+   .ui-field-contain > div[data-controltype='DateTimeBox'][disabled] > div{
+
+        display:none;
+    }
+   
+/****************DataTimebox 样式 End***********************/
+
+/****************Refer 样式 Start***********************/
+.cube-main div[data-controltype='Refer'] {
+     border:1px solid #ffffff;  
+  
+      height: 34px;
+      -webkit-border-radius: 4px;
+         -moz-border-radius: 4px;
+              border-radius: 4px;
+}
+.Refer-focus
+{  
+  border:1px solid #FFD42C;  
+}
+
+.Refer-focus, .cube-main div[data-controltype='Refer']:focus{
+    border-color: #66AFE9;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset, 0 0 8px rgba(102, 175, 233, 0.6);
+    outline: 0 none;
+}
+   .Refer-arrow
+{
+   cursor:pointer;
+}
+    .ui-field-contain > div[data-controltype='Refer'] > input {
+        float:left;
+        width:86%;
+        margin-left:1px;
+        /*margin-right:10px;*/
+	    border: 0;	
+	    outline:none;	        
+        padding: 6px 12px;
+        color: black;    
+        height:100%;
+       /*height:22px;*/ 
+        -webkit-border-radius: 4px;
+        -moz-border-radius: 4px;
+        border-radius: 4px;    
+    }
+
+    .ui-field-contain > div[data-controltype='Refer'] > div {
+        width:8%;
+        float:right;
+        cursor:pointer;
+        text-align:center;
+        display:block;
+    }
+    .cube-main div[data-controltype='Refer'][readonly],.cube-main div[data-controltype='Refer']> Input[readonly]
+{
+        border:1px solid #ffffff;
+  background-color:#ffffff;
+  cursor: auto;  
+}
+.cube-main div[data-controltype='Refer'][disabled],.cube-main div[data-controltype='Refer']> Input[disabled]
+{
+        border:1px solid #ffffff;
+
+  background-color:#ffffff;
+  cursor: not-allowed;  
+}
+
+    .ui-field-contain > div[data-controltype='Refer'][readonly] > div,
+    .ui-field-contain > div[data-controltype='Refer'][disabled] > div{
+        display:none;
+    }
+.parentdiv-noinput
+{
+border:1px solid red;
+}
+
+/****************Refer 样式 End***********************/
+
+
+
+/**************  Radio  Start************/
+
+
+.cube-main div[data-controltype='Radio'].radio {
+    color:#333333;
+    padding: 0 10px 0 10px;
+}
+.cube-main div[data-controltype='Radio'].radio>input[type=radio] {
+    margin: 0 10px 0 10px;
+    float:none;
+}
+
+.cube-main div[data-controltype='Radio'].switch1 {
+	height: 40px;
+	position: relative;
+}
+
+    .cube-main div[data-controltype='Radio'].switch1 > input[type=radio] {
+            visibility:hidden;
+    }
+
+.cube-main div[data-controltype='Radio'].switch1 {
+    color:#333333;
+    padding: 0 10px 0 10px;
+}
+.cube-main div[data-controltype='Radio'].switch1>input[type=radio] {
+    margin: 0 10px 0 10px;
+    float:none;
+}
+.cube-main div[data-controltype='Radio'].switch1>label {
+    float:left;
+    display:block;
+    min-width:30px;
+    border:1px solid #CCCCCC;
+    padding:2px 4px;
+    background-color:#D7D7D7;
+}
+.cube-main div[data-controltype='Radio'].switch1 input[type=radio]:checked + label {
+	   color:#666666;
+       border:1px solid #26ca28;
+	background: #CCEBF8;
+}
+
+.cube-main div[data-controltype='Radio'].checkbox {
+    color:#333333;
+    padding: 0 10px 0 10px;
+}
+.cube-main div[data-controltype='Radio'].checkbox>input[type=radio] {
+    margin: 0 10px 0 10px;
+}
+ 
+.cube-main div[data-controltype='Radio'].switch {
+	
+	height: 40px;
+	position: relative;
+}
+
+    .cube-main div[data-controltype='Radio'].switch > input[type=radio] {
+        visibility:hidden;
+    }
+
+.cube-main div[data-controltype='Radio'].switch:before {
+	position: absolute;
+	top: 12px;
+	left: 13px;
+	height: 2px;
+	color: #26ca28;
+	font-size: 16px;
+}
+
+.cube-main div[data-controltype='Radio'].switch:after {
+	content: 'Off';
+	position: absolute;
+	top: 12px;
+	left: 84px;
+	height: 2px;
+	color: #ddd;
+	font-size: 16px;
+}
+
+
+.cube-main div[data-controltype='Radio'].switch span {
+     display:inline-block;
+     border:1px solid #009DD9;
+}
+
+.cube-main div[data-controltype='Radio'].switch label {
+	display: block;
+	width: 52px;
+	height: 22px;
+
+	-webkit-transition: all .5s ease;
+	-moz-transition: all .5s ease;
+	-o-transition: all .5s ease;
+	-ms-transition: all .5s ease;
+	transition: all .5s ease;
+	cursor: pointer;
+	position: absolute;
+	top: 9px;
+	z-index: 1;
+	left: 12px;
+	background: #ddd;
+}
+
+.cube-main div[data-controltype='Radio'].switch input[type=checkbox]:checked + label {
+	left: 60px;
+	background: #26ca28;
+}
+
+/************** Radio  End**************/
+
+
+/************** Status  Start**************/
+
+.cube-main div[data-controltype='Status'] {
+    padding-left: 15px;
+    margin: 15px 0 0 0;
+}
+
+.cube-main div[data-controltype='Status'] > span:first-child {
+    margin: 0 10px -1px 0;
+}
+
+.cube-main div[data-controltype='Status'] > span:last-child {
+    font-family: '微软雅黑 Regular', '微软雅黑';
+    font-size: 16px;
+    color: #666666;
+}
+
+.cube-main div[data-controltype='Status'] > .img-free {
+    content: url("../images/u169.png");
+}
+
+.cube-main div[data-controltype='Status'] > .img-obsolete {
+    content: url("../images/u188.png");
+}
+
+.cube-main div[data-controltype='Status'] > .img-reviewed {
+    content: url("../images/u150.png");
+}
+
+.cube-main div[data-controltype='Status'] > .img-reviewing {
+    content: url("../images/u94.png");
+}
+
+.cube-main div[data-controltype='Status'] > .img-commit {
+    content: url("../images/u207.png");
+}
+
+
+/************** Status  End**************/
+
+
+/************** ImageSlide  Start**************/
+
+.cube-main div[data-controltype='ImageSlide'] {
+    
+}
+
+.cube-main div[data-controltype='ImageSlide']>ul {
+      display:block;
+      list-style:none;
+      padding:0;
+}
+.cube-main div[data-controltype='ImageSlide']>ul.big img{
+    width:358px;
+    height:268px;
+}
+.cube-main div[data-controltype='ImageSlide']>ul.big li{
+  position:relative;
+}
+.cube-main div[data-controltype='ImageSlide']>ul.big li>div{
+  position:absolute;
+  bottom:0;
+  height:30px;
+  width:100%;
+  background: #000000;
+    background-color: rgba(0,0,0,0.5);
+
+}
+.cube-main div[data-controltype='ImageSlide']>ul.smail img{
+    width:56px;
+    height:41px;
+    cursor:pointer;
+}
+.cube-main div[data-controltype='ImageSlide']>ul.smail >li{
+    width:58px;
+    height:43px;
+    float:left;
+    margin:0px 10px 10px 0;
+}
+.cube-main div[data-controltype='ImageSlide']>div
+{
+font-size: 48px;
+height: 43px;
+width: 60px;
+float: right;
+color: #cccccc;
+background: #F2F2F2;
+text-align: center;
+/* vertical-align: bottom; */
+line-height: 36px;
+margin: 0px 22px 0 0;
+border: 1px dashed  #CCCCCC;
+cursor:pointer;
+}
+
+/************** ImageSlide  End**************/
+
+
+/************** ImageList  Start**************/
+
+.cube-main div[data-controltype='ImageList'] {
+
+}
+.cube-main div[data-controltype='ImageList']>li {
+     position:relative;
+     display:block;
+     margin: 0 0 20px 0;
+}
+.cube-main div[data-controltype='ImageList']>li>img {
+     display:block;
+     width:800px;
+}
+
+.cube-main div[data-controltype='ImageList']>li>div {
+    position: absolute;
+    bottom: 0;
+    height: 30px;
+    background-color: rgba(0,0,0,0.5);
+     width:800px;
+     padding-top: 4px;
+padding-left:20px;
+}
+
+.cube-main div[data-controltype='ImageList']>li>div>div {
+float:right;
+width:120px;
+}
+.cube-main div[data-controltype='ImageList']>li>div>div>img {
+
+width:20px;
+height:20px;
+margin:0 15px;
+ cursor:pointer;
+}
+.cube-main div[data-controltype='ImageList']>li>div >span {
+    position: relative;
+    color:#999999;
+}
+
+/************** ImageList  End**************/
+
+/************** Tiles  Start**************/
+
+.cube-main div[data-controltype='Tiles'] {
+     
+}
+ .cube-main div[data-controltype='Tiles']>ul {
+     display:block;
+     list-style:none;
+     padding:0;
+}
+    .cube-main div[data-controltype='Tiles'] > ul > li {
+        height: 164px;
+        width: 280px;
+        margin: 10px;
+        border: 1px solid #E4E4E4;
+        float: left;
+        position:relative;
+        
+    }
+        .cube-main div[data-controltype='Tiles'] > ul > li.isselect {
+   background:url("../images/Tiles/u233.png") no-repeat right top ;
+        
+    }
+        .cube-main div[data-controltype='Tiles'] > ul > li > div {
+            float:left;
+            margin:15px 0px 0 15px;
+        }
+          .cube-main div[data-controltype='Tiles'] > ul > li > div:last-child {
+            float:right;
+            margin:6px 20px 0 15px;
+        }
+        .cube-main div[data-controltype='Tiles'] > ul > li > div.bank {
+            width:210px;
+            margin-left:10px;
+        }
+        .cube-main div[data-controltype='Tiles'] > ul > li > div.bank >span{
+            display:block;
+        }          
+         .cube-main div[data-controltype='Tiles'] > ul > li > div.bank >span:first-child{
+            font-weight:900;
+            color:#333333;
+        }
+        .cube-main div[data-controltype='Tiles'] > ul > li > div.account {
+           width:280px;
+           margin: 20px 0 0 0;
+        }
+        .cube-main div[data-controltype='Tiles'] > ul > li > div.account >span{
+            display:block;
+            text-align:center;
+        }
+             .cube-main div[data-controltype='Tiles'] > ul > li > div.account >span:first-child{
+            color:#333333;
+            font-size:20px;
+        }
+            .cube-main div[data-controltype='Tiles'] > ul > li > div:first-child {
+                 width:40px;
+                 height:40px;
+            }
+    .cube-main div[data-controltype='Tiles'] > ul > li >div:first-child>img{
+         width:35px;
+         height:34px;
+    }
+    .cube-main div[data-controltype='Tiles']>ul>li.add {
+        border: 1px dashed #E4E4E4;
+        line-height: 164px;
+        font-size: 86px;
+        background:#F2F2F2;
+        color:#cccccc;
+        text-align: center;
+        cursor:pointer;
+    }
+    .cube-main div[data-controltype='Tiles']>ul>li.add>div {
+        position: absolute;
+        top: 66%;
+        left: center;
+        font-size: 14px;
+        width: 280px;
+        line-height: 40px;
+        color: #333333;
+        margin:0px;
+    }
+
+
+/************** Tiles  End**************/             
+
+/************** AttachmentList  Start**************/
+
+.cube-main div[data-controltype='AttachmentList'] {
+}
+
+.cube-main div[data-controltype='AttachmentList'] >ul{
+    display:block;
+    list-style:none;
+    padding:0;
+} 
+.cube-main div[data-controltype='AttachmentList'] >ul>li{
+    width:340px;
+    height:55px;
+    float:left;
+    background:#DDF4FF;
+    padding:7px;
+    margin:10px 10px 0 0;
+}  
+.cube-main div[data-controltype='AttachmentList'] >ul>li>img{
+    width:26px;
+    height:30px;
+    float:left;
+    margin: 4px 10px 10px 0px;
+} 
+      
+.cube-main div[data-controltype='AttachmentList'] >ul>li>div{
+    width:290px;
+    float:left;
+}  
+.cube-main div[data-controltype='AttachmentList'] >ul>li> div>div:first-child{
+    width:160px;
+    float:left;
+} 
+.cube-main div[data-controltype='AttachmentList'] >ul>li> div>div:last-child{
+width: 80px;
+float: right;
+}
+  
+.cube-main div[data-controltype='AttachmentList'] >ul>li> div>div:last-child>span{
+margin-left:10px;
+color:#157DFB ;
+}
+.cube-main div[data-controltype='AttachmentList'] >ul>li> div:last-child>span{
+    margin-right:10px;
+    color:#999999;
+}  
+.cube-main div[data-controltype='AttachmentList'] >ul>li> div:last-child>span:first-child{
+    color:#333333 ;
+}                                        
+/************** AttachmentList  End**************/
+
