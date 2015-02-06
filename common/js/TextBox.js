@@ -3,6 +3,13 @@ cb.controls.widget("TextBox", function (controlType) {
     var _shieldChar;
     var control = function (id, options) {
         cb.controls.Control.call(this, id, options);
+        this.getElement().on("change", this, function (e, args) {
+            e.data.execute("change");
+        });
+        this.getElement().on("keydown", this, function (e, args) {
+            if (e.keyCode != 13) return;
+            e.data.execute("enter");
+        });
     };
     control.prototype = new cb.controls.Control();
     control.prototype.controlType = controlType;
@@ -46,12 +53,12 @@ cb.controls.widget("TextBox", function (controlType) {
                 case "tabindex":
                     this.setTabIndex(attrValue);
                     break;
-            }            
+            }
         }
     };
     //设置最大输入长度
     control.prototype.setMaxLength = function (val) {
-        this.set("maxlength",val)
+        this.set("maxlength", val)
     };
     //检测屏蔽字符
     control.prototype.setCheckShield = function (val) {
@@ -60,7 +67,7 @@ cb.controls.widget("TextBox", function (controlType) {
         var val = this.getElement().val();
         var result = false;
         for (var i = 0; i < arrlength; i++) {
-            if (val.indexOf(charList[i]) > 0){
+            if (val.indexOf(charList[i]) > 0) {
                 result = true;
                 break;
             }

@@ -185,7 +185,7 @@ function DataGrid(el,options){
 
 	this.$el=$(el).first();
 	this.$el.addClass('grid');
-	
+	this._initEvents();
 	//支持延时实例初始化
 	if(typeof options==='object'){
 		this.init(options);
@@ -366,7 +366,7 @@ DataGrid.prototype={
 		this._lastScrollTop=0;
 		this._lastScrollLeft=0;
 	
-		this._initEvents();
+		this._initEventsAfterRender();
 		//调整固定边界位置
 		this._fixFrozenHandlerPosition();
 		
@@ -384,10 +384,10 @@ DataGrid.prototype={
 		var view=this.$el.children('.view');
 		$('.frozenBoundary',view).css('left',left+view[0].scrollLeft+'px');
 	},
-	_initEvents:function(){
-		//固定列实现
-		var view=this.$el.children('.view');
+	_initEventsAfterRender:function(){
 		var dg=this;
+		var view=this.$el.children('.view');
+		view.off('scroll');
 		view.scroll(function(evt){
 			dg._fixScroll(evt);
 		});
@@ -464,9 +464,11 @@ DataGrid.prototype={
 			}
 			$(this).css('left',width+'px');
 			dg._frozeColByIndex(i);
-		})
-		//
-		$('.viewHeader .cell',this.$el).on('click',function(evt){
+		});
+	},
+	_initEvents:function(){
+		var dg=this;
+		this.$el.on('click','.viewHeader .cell',function(evt){
 			//拖动手柄上的点击不处理
 			if($(evt.target).is('.col-resizer'))return;
 			
@@ -519,13 +521,14 @@ DataGrid.prototype={
 		
 		//复选框事件处理
 		if(this.showCheckBox){
-			$('.header .chkAll input',this.$el).click(function(evt){
+			this.$el.on('click','.header .chkAll input',function(evt){
 				if(this.checked){
 					dg.selectAll();
 				}else{
 					dg.unselectAll();
 				}
 			});
+			
 			//内容行checkbox点击事件处理
 			this.$el.on('click','input.checkable',function(evt){
 				var row=$(this).closest('tr')[0],
@@ -558,6 +561,7 @@ DataGrid.prototype={
 				if(currentValue!==dg._currentEditor.initValue){
 					//尝试修改model
 					dg.execute('fieldValueChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
+					$(this).closest('.cell').remove('editing');
 				}
 				$(dg.cellEditorWrapper).closest('td').children('.cellContent').css('visibility','visible');//显示内容
 			}
@@ -1116,6 +1120,8 @@ DataGrid.prototype={
 		var container=this._getEditorContainer(rowIndex,field);
 		container.appendChild(this.cellEditorWrapper);
 		this._currentEditor=this._getFieldEditor(col,dataContext);//保存对编辑器的引用
+		//增加单元格的层级
+		$(container).closest('.cell').addClass('editing');
 		//隐藏内容
 		$(container).closest('td').children('.cellContent').css('visibility','hidden');
 		var td=this.cellEditorWrapper.rows[0].cells[0];

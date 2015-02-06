@@ -139,7 +139,9 @@
 .grid    .frozen~.cell {
 	z-index:1;
 }
-
+.grid .cell.editing{
+	z-index:10;
+}
 .grid    .frozen~.cell  .cellBorder{
 	z-index:3;
 	/*background-color:transparent;*/
@@ -274,3 +276,4 @@
 	width:100%;
 	box-sizing:border-box;
 }
+.grid .CheckboxEditor{text-align:center;}
