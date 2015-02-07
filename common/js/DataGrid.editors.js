@@ -47,7 +47,7 @@ var CheckboxEditor=$.extend({},Editor,{
 var TextBoxEditor=$.extend({},Editor,{
 	init: function(container, options){
 		if(!this.el){
-			this.el=$('<div class="cellEdtior TextBoxEditor"><input type="text" /></div>').appendTo(container)[0];
+			this.el=$('<div class="cellEdtior TextBoxEditor"><input  type="text" data-controltype="TextBox" /></div>').appendTo(container)[0];
 			this.target=$(this.el).find('input')[0];
 			//时间处理
 		}else{

@@ -521,7 +521,7 @@ $.extend(cb.model.Model3D.prototype,{
 		//根据模型设置的排序规则，对数据行排序，返回排序后的行对象数组
 	_sort:function(rows){
 		var fields=this.getSortFields();
-		if(!fields.length)return rows;
+		if(this._data.editable||!fields.length)return rows;
 		var model3d=this,
 			Model3D=cb.model.Model3D;
 			columns=this._getColumns();

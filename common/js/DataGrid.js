@@ -468,10 +468,16 @@ DataGrid.prototype={
 	},
 	_initEvents:function(){
 		var dg=this;
+		$(document).click(function(evt){
+			//dg._currentEditor表示当前活动的编辑器
+			if(dg._currentEditor){
+				dg._commitCellChange();
+			}
+		});
 		this.$el.on('click','.viewHeader .cell',function(evt){
 			//拖动手柄上的点击不处理
 			if($(evt.target).is('.col-resizer'))return;
-			
+			if(dg.editable)return;
 			var sortFields;
 			var cell=$(this);
 			var field=cell.data('field');
@@ -551,28 +557,43 @@ DataGrid.prototype={
 				dg.setFocusedRow(index);
 			});
 		//点击单元格
-		this.$el.on('click','.viewBody .field',function(evt){
+		this.$el.on('click','.viewBody .cell',function(evt){
 			if($(evt.target).closest('.cellEditorWrapper').length)return;
 			var field=$(this).data('field');
 			var rowIndex=$(this.parentNode).index();
+		
 			//处理之前编辑的单元格
 			if(dg._currentEditor&&(dg._editRowIndex!==rowIndex||dg._editingField!==field)){
-				var currentValue=dg._currentEditor.getValue();
-				//移除编辑器
-				dg._docFragment.appendChild(dg.cellEditorWrapper);
-				var $td=$(dg.cellEditorWrapper).closest('.cell').removeClass('editing');
-				//如果值有改变，同步到model
-				if(currentValue!==dg._currentEditor.initValue){
-					//尝试修改model
-					dg.execute('fieldValueChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
-					
-				}
-				$td.children('.cellContent').css('visibility','visible');//显示内容
+				dg._commitCellChange();
 			}
 			if(dg.editable){
 				dg.execute('beforeEditField',{rowIndex:rowIndex,field:field});
 			}
+			evt.stopPropagation();
 		});
+	},
+	//提交字段的修改(当在处于编辑态的单元格外点击时，触发提交修改)
+	_commitCellChange:function(){
+		var currentValue=dg._currentEditor.getValue(),
+			initValue=dg._currentEditor.initValue;
+		//移除编辑器
+		
+		var lastEditedCell=$(dg.cellEditorWrapper).closest('.cell');
+		var lastEditedRow=lastEditedCell.parent(),
+			lastCellIndex=lastEditedCell.index();
+		dg._docFragment.appendChild(dg.cellEditorWrapper);
+		dg._docFragment.appendChild(dg._currentEditor.el);
+		lastEditedCell.removeClass('editing');
+		delete dg._currentEditor.initValue;
+		delete dg._currentEditor;
+		//如果值有改变，同步到model
+		if(currentValue!==initValue){
+			//尝试修改model
+			dg.execute('fieldValueChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
+			
+		}
+		//如果值被修改了，整个td会被更新，这时候之前的td已经不存在，所以下面的
+		$('.cellContent',lastEditedRow[0].cells[lastCellIndex]).css('visibility','visible');//显示内容
 	},
 	_fixScroll:function(evt){
 		var view=this.$el.children('.view');
@@ -1103,19 +1124,6 @@ DataGrid.prototype={
 		var dg=this;
 		if(!this.cellEditorWrapper){//第一次调用时，生成编辑器包装
 			this.cellEditorWrapper=$('<table class="cellEditorWrapper"><tbody><tr><td></td></tr></tbody></table>')[0];
-			//当鼠标在编辑器外点击时，触发提交修改
-			/*
-			$(document).click(function(evt){
-				if($(evt.target).closest('.cellEditorWrapper').length)return;
-				var currentValue=dg._currentEditor.getValue();
-				if(currentValue!==dg._currentEditor.initValue){
-					//尝试修改model
-					dg.execute('fieldValueChange',{field:dg._editingField,index:_editRowIndex,value:currentValue});
-				}
-				$(dg.cellEditorWrapper).closest('td').children('.cellContent').css('visibility','visible');//显示内容
-			});
-			
-			*/
 			$(this.cellEditorWrapper).on('click',function(evt){
 				evt.stopPropagation()
 			});
@@ -1132,7 +1140,6 @@ DataGrid.prototype={
 		//td.innerHTML='';//不能直接清空，上一次使用的编辑器视图元素必需保留
 		this._docFragment=this._docFragment||document.createDocumentFragment();
 		if(this._currentEditor&&this._currentEditor.el)this._docFragment.appendChild(this._currentEditor.el);
-		//td.innerHTML='';
 		
 		this._currentEditor=this._getFieldEditor(col,dataContext);//保存对编辑器的引用
 		this._currentEditor.init(td,col);

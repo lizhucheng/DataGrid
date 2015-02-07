@@ -151,6 +151,7 @@ var columns={
 	pk_so_somain:{title:"订单主表pk",length:20,nullable:false,ctrlType:"TextBox",key:true,visible:false,owner:"somain 订单主表"},
 	pk_so_somain_b:{title:"订单子表pk",length:0,refKey:"pk_so_sodetails",ctrlType:"DataGrid",visible:false,owner:"somain 订单主表"},
 	billno:{title:"单据号",length:50,ctrlType:"TextBox",owner:"somain 订单主表"},
+	idispstate:{title:"发货状态",length:50,ctrlType:"ComboBox",enumType:"u8.idispstateEnum",owner:"somain 订单主表",dataSource:[{text:"未发货",value:"0"},{text:"部分发货",value:"1"},{text:"发货完毕",value:"2"}]},
 	vtrantypecode:{title:"单据类型编码",length:50,ctrlType:"TextBox",owner:"somain 订单主表"},
 	btax:{title:"报价是否含税",length:1,defaultValue:"false",ctrlType:"CheckBox",owner:"somain 订单主表"},
 	vtrantype:{title:"订单类型",length:20,refKey:"pk_billtypeid",refCode:"pk_billtypecode",refName:"billtypename",ctrlType:"Refer",refId:"4848",refShowMode:"Name",owner:"somain 订单主表"},
@@ -185,7 +186,7 @@ var columns={
 	
 	itaxrate:{title:"税率",length:50,ctrlType:"TextBox",owner:"somain 订单主表"},
 	cmemo:{title:"备注",length:50,ctrlType:"TextBox",owner:"somain 订单主表"},
-	idispstate:{title:"发货状态",length:50,ctrlType:"ComboBox",enumType:"u8.idispstateEnum",owner:"somain 订单主表",dataSource:[{text:"未发货",value:"0"},{text:"部分发货",value:"1"},{text:"发货完毕",value:"2"}]},
+	
 	ioutstate:{title:"出库状态",length:50,ctrlType:"ComboBox",enumType:"u8.ioutstateEnum",owner:"somain 订单主表",dataSource:[{text:"未出库",value:"0"},{text:"部分出库",value:"1"},{text:"出库完毕",value:"2"}]},
 	ddispdate:{title:"表头预发货日期",ctrlType:"DateTimeBox",owner:"somain 订单主表"},
 	def1:{title:"自定义项1",length:101,ctrlType:"TextBox",visible:false,owner:"somain 订单主表"},
