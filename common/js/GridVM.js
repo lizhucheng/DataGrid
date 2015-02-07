@@ -297,7 +297,7 @@ $.extend(cb.model.Model3D.prototype,{
 				return;
 
 			var data = { rowIndex: rowIndex, cellName: cellName, value: value, oldValue: oldValue };
-			if (!this._before("fieldValueChange", data))
+			if (!this._before("CellChange", data))
 				return false;
 			if (cellIsObject)
 				cell.value = value;
@@ -305,10 +305,10 @@ $.extend(cb.model.Model3D.prototype,{
 				row[cellName] = value;
 			row.state = cb.model.DataState.Update;
 
-			var args = new cb.model.PropertyChangeArgs(this._name, "fieldValueChange", data);
+			var args = new cb.model.PropertyChangeArgs(this._name, "cellValue", data);
 			this.PropertyChange(args);
 
-			this._after("fieldValueChange", data); //值变化出发,无焦点要求
+			this._after("CellChange", data); //值变化出发,无焦点要求
 		}
 		else {
 			//设置控件状态
@@ -621,27 +621,7 @@ $.extend(cb.model.Model3D.prototype,{
 		this.set(rowIndex, cellName, propertyName, value);
 	},
 	//#endregion state
-
-	getCellValue:function (rowIndex, cellName) {
-		return this.get(rowIndex, cellName);
-	},
-	setCellValue:function (rowIndex, cellName, value) {
-		this.set(rowIndex, cellName, null, value);
-	},
-	//界面录入值变化触发
-	cellChange:function (rowIndex, cellName, value) {
-		var oldValue = this.getCellValue(rowIndex, cellName);
-		if (oldValue === value)
-			return false;
-		var data = { rowIndex: rowIndex, cellName: cellName, value: value, oldValue: oldValue };
-		if (this._before("CellChange", data)) {
-			this.setCellValue(rowIndex, cellName, value);
-			this._after("CellChange", data)
-			return true;
-		}
-	},
-
-
+	
 	setColumns:function (columns,fieldNames) {
 		if (!this._before("setColumns", columns))
 			return;
@@ -1054,11 +1034,7 @@ $.extend(cb.model.Model3D.prototype,{
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "registerFieldEditor", {name:def}));
 	},
 	//编辑相关
-	//在字段上点击
-	_isFieldEditable:function(index,field){
-		return !this.getColumnState(field,'readOnly')&&this.getRowState(field,'readOnly')
-	},
-	_onBeforeEditField:function(data){//data中包含行位置索引和列名
+	_onBeforeCellEditing:function(data){//data中包含行位置索引和列名
 		var index=data.rowIndex,
 			field=data.field;
 		var readOnly=this.getReadOnly(index,field);
@@ -1069,16 +1045,42 @@ $.extend(cb.model.Model3D.prototype,{
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "cellEditing", evtArg));	
 	
 	},
+	//值操作
+	getCellValue:function (rowIndex, cellName) {
+		return this.get(rowIndex, cellName);
+	},
+	setCellValue:function (rowIndex, cellName, value) {
+		return this.set(rowIndex, cellName, null, value);
+	},
+	insertRow:function(rowIndex){
+	
+	},
+	updateRow:function (row, modifyData) {
+		if (!row || !modifyData)
+			return;
+		var rowIndex = this.getRowIndex(row);
+		if (rowIndex < 0)
+			return;
+		for (var attr in modifyData) {
+			this.set(rowIndex, attr, null, value);
+		}
+	},
+	deleteRow:function(rowIndex){
+	
+	},
+	deleteRows:function(rowIndex){
+	
+	},
 	//新增空行
-	addNewRow:function () {
-		if (!this._before("addNewRow"))//beforeadd
+	addRow:function () {
+		if (!this._before("addRow"))//beforeadd
 			return;
 		var newRow = { state: cb.model.DataState.Add }; //新增行
 		this._data.rows.push(newRow);
 		this._$setId(newRow);
 		this.setFocusedRow(newRow);
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "addNewRow", newRow));
-		this._after("addNewRow");
+		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "addRow", newRow));
+		this._after("addRow");
 	},
 	add:function (rows, isRemoveAll) {
 		if (isRemoveAll) {
@@ -1151,16 +1153,7 @@ $.extend(cb.model.Model3D.prototype,{
 
 		this._after("remove");
 	},
-	updateRow:function (row, modifyData) {
-		if (!row || !modifyData)
-			return;
-		var rowIndex = this.getRowIndex(row);
-		if (rowIndex < 0)
-			return;
-		for (var attr in modifyData) {
-			this.set(rowIndex, attr, null, value);
-		}
-	},
+
 	_backupDeleteRows:function (row) {
 		if (row && row.state != cb.model.DataState.Add) {
 			this._data.DeleteRows = this._data.DeleteRows || [];

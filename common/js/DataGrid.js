@@ -567,7 +567,7 @@ DataGrid.prototype={
 				dg._commitCellChange();
 			}
 			if(dg.editable){
-				dg.execute('beforeEditField',{rowIndex:rowIndex,field:field});
+				dg.execute('beforeCellEditing',{rowIndex:rowIndex,field:field});
 			}
 			evt.stopPropagation();
 		});
@@ -589,7 +589,7 @@ DataGrid.prototype={
 		//如果值有改变，同步到model
 		if(currentValue!==initValue){
 			//尝试修改model
-			dg.execute('fieldValueChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
+			dg.execute('cellChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
 			
 		}
 		//如果值被修改了，整个td会被更新，这时候之前的td已经不存在，所以下面的

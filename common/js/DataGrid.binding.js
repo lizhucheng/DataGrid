@@ -176,8 +176,8 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	
 	///////////编辑功能相关
 	
-	this._onBeforeEditField=function(data){
-		this.getModel()._onBeforeEditField(data);
+	this._onBeforeCellEditing=function(data){
+		this.getModel()._onBeforeCellEditing(data);
 	};
 	this._set_cellEditing=function(control,data){
 		control._setCellEditing(data.field,data.index,data.record);
@@ -186,11 +186,11 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	this._set_registerFieldEditor=function(control,data){
 		control.registerFieldEditor(data.name,data.def);
 	};
-	this._onFieldValueChange=function(data){
+	this._onCellChange=function(data){
 		var model = this.getModel();
-		model.set(data.rowIndex, data.field,'value',data.value);
+		model.setCellValue(data.rowIndex, data.field,data.value);
 	};
-	this._set_fieldStateChange=function(control,data){
+	this._set_cellValue=function(control,data){
 		var rowData=this.getModel().getRow(data.rowIndex);
 		control.updateCell(data.rowIndex,data.cellName,data.value,rowData);
 	};
@@ -272,10 +272,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.un("focusChange", this._onFocusChange);
             control.on("focusChange", this._onFocusChange, this);
 			
-			control.un("beforeEditField", this._onBeforeEditField);
-			control.on("beforeEditField", this._onBeforeEditField, this);
-			control.un("fieldValueChange", this._onFieldValueChange);
-            control.on("fieldValueChange", this._onFieldValueChange, this);
+			control.un("beforeCellEditing", this._onBeforeCellEditing);
+			control.on("beforeCellEditing", this._onBeforeCellEditing, this);
+			control.un("cellChange", this._onCellChange);
+            control.on("cellChange", this._onCellChange, this);
 
 			
             control.un("onAddNewRow", this._onAddNewRow);
