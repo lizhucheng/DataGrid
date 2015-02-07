@@ -558,12 +558,16 @@ DataGrid.prototype={
 			//处理之前编辑的单元格
 			if(dg._currentEditor&&(dg._editRowIndex!==rowIndex||dg._editingField!==field)){
 				var currentValue=dg._currentEditor.getValue();
+				//移除编辑器
+				dg._docFragment.appendChild(dg.cellEditorWrapper);
+				var $td=$(dg.cellEditorWrapper).closest('.cell').removeClass('editing');
+				//如果值有改变，同步到model
 				if(currentValue!==dg._currentEditor.initValue){
 					//尝试修改model
 					dg.execute('fieldValueChange',{field:dg._editingField,rowIndex:dg._editRowIndex,value:currentValue});
-					$(this).closest('.cell').remove('editing');
+					
 				}
-				$(dg.cellEditorWrapper).closest('td').children('.cellContent').css('visibility','visible');//显示内容
+				$td.children('.cellContent').css('visibility','visible');//显示内容
 			}
 			if(dg.editable){
 				dg.execute('beforeEditField',{rowIndex:rowIndex,field:field});
@@ -1119,13 +1123,18 @@ DataGrid.prototype={
 		var col=this.getColumn(field);
 		var container=this._getEditorContainer(rowIndex,field);
 		container.appendChild(this.cellEditorWrapper);
-		this._currentEditor=this._getFieldEditor(col,dataContext);//保存对编辑器的引用
+		
 		//增加单元格的层级
 		$(container).closest('.cell').addClass('editing');
 		//隐藏内容
 		$(container).closest('td').children('.cellContent').css('visibility','hidden');
 		var td=this.cellEditorWrapper.rows[0].cells[0];
-		td.innerHTML='';
+		//td.innerHTML='';//不能直接清空，上一次使用的编辑器视图元素必需保留
+		this._docFragment=this._docFragment||document.createDocumentFragment();
+		if(this._currentEditor&&this._currentEditor.el)this._docFragment.appendChild(this._currentEditor.el);
+		//td.innerHTML='';
+		
+		this._currentEditor=this._getFieldEditor(col,dataContext);//保存对编辑器的引用
 		this._currentEditor.init(td,col);
 		this._currentEditor.initValue=dataContext[field];
 		this._currentEditor.setValue(dataContext[field]);

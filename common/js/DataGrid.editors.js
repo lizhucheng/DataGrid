@@ -67,7 +67,7 @@ var DefaultEditor=TextBoxEditor;
 var ComboxEditor=$.extend({},Editor,{
 	init: function(container, options){
 		if(!this.el){
-			this.el=$('<div class="cellEdtior DateTimeEditor"><div class="ui-field-contain"><div  data-controltype="ComboBox" ><input type="text" /></div></div></div>').appendTo(container)[0];
+			this.el=$('<div class="cellEdtior ComboBoxEditor"><div class="ui-field-contain"><div  data-controltype="ComboBox" ><input type="text" /></div></div></div>').appendTo(container)[0];
 			this.target=new cb.controls['ComboBox']($(this.el).find('[data-controltype=ComboBox]'));
 			this.target.setDataSource(options.dataSource);
 			//时间处理
@@ -78,7 +78,7 @@ var ComboxEditor=$.extend({},Editor,{
 		if(options.length){
 			
 		}
-		this.target.getElement().trigger('click');
+		this.target.getElement().children('div').trigger('click');
 		//根据配置信息初始化editor
 	},
 	getValue: function(){
