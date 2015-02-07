@@ -859,11 +859,11 @@ $.extend(cb.model.Model3D.prototype,{
 	getPageSize:function () {
 		return this._data.pageSize;
 	},
-	setPageIndex:function(index,_inner){
+	setPageIndex:function(index,_inner,beforeRender,afterRender){
 		var pageCount=this.getPageCount();
 		if(index>=0&&index<pageCount){
 			this._data.pageIndex=index;
-			if(!_inner){this._refreshDisplay();}
+			if(!_inner){this._refreshDisplay(beforeRender,afterRender);}
 		}
 	},
 	getTotalCount:function(){
@@ -1052,127 +1052,123 @@ $.extend(cb.model.Model3D.prototype,{
 	setCellValue:function (rowIndex, cellName, value) {
 		return this.set(rowIndex, cellName, null, value);
 	},
-	insertRow:function(rowIndex){
-	
+	//插入行：只有编辑态下才能执行该操作，编辑态下不支持排序，过滤等操作，
+	insertRow:function(rowIndex,rowData){
+		var rowsInPage=this._data.rows;
+		rowData=cb.clone(rowData);//使用副本
+		rowIndex=Math.min(rowsInPage.length,Math.max(0,rowIndex));//0<=rowIndex<=this._data.rows.length;
+		//插入新行前提供校验机制
+		if (!this._before("insertRow", { rowIndex: rowIndex, rowData: rowData }))return false;
+		//计算在ds中的位置
+		var ds=this._dataSource,
+			indexInDs;
+		if(rowsInPage.length==0){
+			indexInDs=0;
+		}else{
+			//如果是在页尾追加，则计算出最后一行的位置，把行添加到最后一行的后面;否则把行插入到页中rowIndex对应的行在ds中的位置
+			indexInDs=rowsInPage[rowIndex]?ds.indexOf(rowsInPage[rowIndex]):ds.indexOf(rowsInPage[rowsInPage.length-1])+1;
+		}
+		this._dataSource.splice(indexInDs,0,rowData);
+		//同步行状态
+		this._rowsDataState.splice(indexInDs,0,cb.model.DataState.Add);
+		//更新要显示的行
+		this._focusedRowIndex=rowIndex;//暂时不通知视图更新，下面的刷新显示会获取焦点信息
+		this._refreshDisplay();
+		this._after("insertRow");
 	},
-	updateRow:function (row, modifyData) {
-		if (!row || !modifyData)
-			return;
-		var rowIndex = this.getRowIndex(row);
-		if (rowIndex < 0)
-			return;
+	appendRow:function(rowData){//分页时可能最后一页数据还在远程服务器
+		if (!this._before("insertRow", { rowIndex: rowIndex, rowData: rowData }))return false;
+		var pageSize=this.getPageSize();
+		var rowIndex;
+		if(pageSize!==-1){//分页
+			//跳转到最后一页
+			
+			var pageServer=this._getPageServer();
+			var params=$.extend({},this._queryParams);
+			var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
+			params.pageSize=pageInfo.pageSize;
+			params.pageIndex=pageInfo.pageIndex+1;
+			//pageServer(params,this._pageServerCallBack);
+			//此处重新定义数据返回后的逻辑，以减少页面的多次渲染
+			pageServer(params,$.proxy(function(success,fail){
+				if(success){
+					var data=success;
+					if(this._dataSource.length!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
+					if(data._pageStart==undefined){
+						var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
+						data._pageStart=pageInfo.pageStart;
+						data._dsStart=pageInfo.dsStart;
+					}
+					this._updateDataSource(data.currentPageData,data._dsStart,data._pageStart);
+					
+					this._dataSource.push(rowData);
+					this._rowsDataState.push(cb.model.DataState.Add);
+					var totalCount=data.totalCount,
+						pageSize=this.getPageSize();
+					var lastPageSize=totalCount%pageSize;
+					lastPageSize=lastPageSize?lastPageSize:pageSize;
+					
+					this._focusedRowIndex=lastPageSize-1;
+					this.setPageIndex(this.getPageCount()-1,true);
+					this._after("insertRow");
+				}else{
+					alert(fail.message);
+				}
+			},this));
+		}else{
+			this._dataSource.push(rowData);
+			this._rowsDataState.push(cb.model.DataState.Add);
+			this._focusedRowIndex=rowIndex;//暂时不通知视图更新，下面的刷新显示会获取焦点信息
+			this._refreshDisplay();//数据都已在本地了
+			this._after("insertRow");
+		}
+		
+	},
+	updateRow:function (rowIndex, modifyData) {
+		if (rowIndex < 0||rowIndex>=this._data.rows.length || !modifyData)return false;
 		for (var attr in modifyData) {
-			this.set(rowIndex, attr, null, value);
+			this.set(rowIndex, attr, null, modifyData[attr]);
 		}
+		return true;
 	},
-	deleteRow:function(rowIndex){
 	
-	},
-	deleteRows:function(rowIndex){
-	
-	},
-	//新增空行
-	addRow:function () {
-		if (!this._before("addRow"))//beforeadd
-			return;
-		var newRow = { state: cb.model.DataState.Add }; //新增行
-		this._data.rows.push(newRow);
-		this._$setId(newRow);
-		this.setFocusedRow(newRow);
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "addRow", newRow));
-		this._after("addRow");
-	},
-	add:function (rows, isRemoveAll) {
-		if (isRemoveAll) {
-			this._data.rows.removeAll();
-			this.setFocusedRow(null);
-		}
-		if (!this._before("add", rows))//beforeadd
-			return;
-		rows = cb.isArray(rows) ? rows : [rows];
-		for (var i = 0; i < rows.length; i++) {
-			this._data.rows.push(rows[i]); //rows可以为多行,[]
-			if (!rows[i].state)
-				rows[i].state == cb.model.DataState.Add; //新增行
-			this._$setId(rows[i]);
-		}
-		if (!this._focusedRow) {
-			this.setFocusedRow(this._data.rows[0]);
-		}
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "add", rows));
-		this._after("add");
-	},
-	insert:function (rowIndex, row) {
-		if (!this._before("insert", { RowIndex: rowIndex, Value: row }))
-			return;
-		var willSetFocusedRow;
-		if (row) willSetFocusedRow = true;
-		row = row || {};
-		if (!row.state)
-			row.state = cb.model.DataState.Add; //新增行
-
-		this._data.rows.insert(rowIndex, row);
-
-		this._$setId(row);
-		this._processRow(row);
-
-		if (willSetFocusedRow == true) {
-			this.setFocusedRow(this._data.rows[rowIndex]);
-		}
-
-		//this.setDirty(rowIndex, true);
-		//this.set(rowIndex, null, "State", "Add");
-
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "insert", { Row: rowIndex, Value: row }));
-
-		this._after("insert");
-	},
-	remove:function (rows) {
-		if (!this._before("remove", rows))
-			return;
-		var deleteRows = [];
-		if (cb.isArray(rows)) {
-			for (var j = 0; j < rows.length; j++) {
-				var index = (typeof rows[j] == "number") ? rows[j] : this._data.rows.indexOf(rows[j]);
-				deleteRows.push(index);
+	deleteRows:function(rowIndexs){
+		var rows=this._getRowsByIndexs(rowIndexs);
+		if (!this._before("deleteRows", rows))return false;
+		
+		var ds=this._dataSource,
+			rowDataState=this._rowsDataState,
+			rowsInPage=this._data.rows,
+			rowIndexs=rowIndexs.sort(),//递增排序
+			Add=cb.model.DataState.Add,
+			Delete=cb.model.DataState.Delete,
+			rowIndex,
+			indexInDs;
+		for(var i=rowIndexs.length;i;i--){
+			rowIndex=rowIndexs[i];
+			if (rowIndex < 0||rowIndex>=rowsInPage.length){
+				indexInDs=ds.indexOf(rowsInPage[rowIndex]);
+				if(rowDataState[indexInDs]===Add){//如果是新添加的记录，直接删除
+					rowDataState.splice(indexInDs,1);
+					ds.splice(indexInDs,1);
+				}else{
+					rowDataState[indexInDs]==Delete;
+				}
 			}
-			deleteRows.sort(function (a, b) { return a < b ? 1 : -1; });
-			cb.each(deleteRows, function (k) {
-				this._backupDeleteRows(this._data.rows[k]);
-				this._data.rows.remove(k);
-			}, this);
 		}
-		else {
-			var index2 = (typeof rows == "number") ? rows : this._data.rows.indexOf(rows);
-			deleteRows.push(index2);
-			this._backupDeleteRows(this._data.rows[index2]);
-			this._data.rows.remove(index2);
-		}
-
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "remove", deleteRows));
-
-		this._after("remove");
+		//刷新显示
+		this._refreshDisplay();//删除后可能导致请求下页数据
+		//this._after("deleteRows");
+	},
+	_getRowsByIndexs:function(rowIndexs){
+		var rows=[];
+		var rowsInPage=this._data.rows;
+		$.each(rowIndexs,function(i,rowIndex){
+			rows.push(rowsInPage[rowIndex]);
+		});
+		return rows;
 	},
 
-	_backupDeleteRows:function (row) {
-		if (row && row.state != cb.model.DataState.Add) {
-			this._data.DeleteRows = this._data.DeleteRows || [];
-			row.state = cb.model.DataState.Delete;
-			this._data.DeleteRows.push(row);                //删除数据,脏数据处理逻辑，删除？？
-		}
-	},
-	removeAll:function () {
-		if (!this._before("removeAll"))
-			return;
-
-		this._data.rows.removeAll();
-		this.setFocusedRow(null);
-
-		//this.setDirty(true);
-		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "removeAll", this));
-
-		this._after("removeAll");
-	},
 	setDirty:function (rowIndex, value) {
 		//this.set(rowIndex, null, "IsDirty", value);
 	},

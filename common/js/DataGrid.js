@@ -150,6 +150,7 @@ DataGrid.ROWNOCOL={
 	$name:'__rowNo',
 	type:'Number',
 	width:35,
+	readOnly:true,
 	sortable:false,
 	resizable:false
 };
@@ -157,6 +158,7 @@ DataGrid.CHECKBOXCOL={
 	$name:'__chkBox',
 	type:'Boolean',
 	width:35,
+	readOnly:true,
 	sortable:false,
 	resizable:false,
 	formatter:function(value,dataContext){
@@ -392,6 +394,28 @@ DataGrid.prototype={
 			dg._fixScroll(evt);
 		});
 		
+		//复选框事件处理
+		if(this.showCheckBox){
+			this.$el.on('click','.header .chkAll input',function(evt){
+				if(this.checked){
+					dg.selectAll();
+				}else{
+					dg.unselectAll();
+				}
+			});
+			
+			//内容行checkbox点击事件处理
+			this.$el.on('click','input.checkable',function(evt){
+				var row=$(this).closest('tr')[0],
+					rows=dg._getRows(),
+					index=rows.indexOf(row);
+				if(this.checked){					
+					dg.select(index);
+				}else{
+					dg.unselect(index);
+				}
+			});
+		}
 		//拖动调整列宽
 		$('.header .col-resizer',view).drag('draginit',function(ev, dd){
 			$(this).addClass('active');
@@ -470,8 +494,10 @@ DataGrid.prototype={
 		var dg=this;
 		$(document).click(function(evt){
 			//dg._currentEditor表示当前活动的编辑器
-			if(dg._currentEditor){
+			if(dg._currentEditor&&!dg._documentIgnoreThisClick){
 				dg._commitCellChange();
+			}else{
+				delete dg._documentIgnoreThisClick;
 			}
 		});
 		this.$el.on('click','.viewHeader .cell',function(evt){
@@ -524,30 +550,6 @@ DataGrid.prototype={
 			dg._sortBy(sortFields,nextStatus==='none'?true:false);
 		});
 		
-		
-		//复选框事件处理
-		if(this.showCheckBox){
-			this.$el.on('click','.header .chkAll input',function(evt){
-				if(this.checked){
-					dg.selectAll();
-				}else{
-					dg.unselectAll();
-				}
-			});
-			
-			//内容行checkbox点击事件处理
-			this.$el.on('click','input.checkable',function(evt){
-				var row=$(this).closest('tr')[0],
-					rows=dg._getRows(),
-					index=rows.indexOf(row);
-				if(this.checked){					
-					dg.select(index);
-				}else{
-					dg.unselect(index);
-				}
-			});
-		}
-		
 		//点击行时，行获得焦点
 		this.$el.on('click','.viewBody tr[data-role=row]',function(evt){
 				if($(evt.target).closest('.cellEditorWrapper').length)return;
@@ -566,10 +568,11 @@ DataGrid.prototype={
 			if(dg._currentEditor&&(dg._editRowIndex!==rowIndex||dg._editingField!==field)){
 				dg._commitCellChange();
 			}
-			if(dg.editable){
+			if(dg.editable&&!dg.getColumn(field).readOnly){
 				dg.execute('beforeCellEditing',{rowIndex:rowIndex,field:field});
+				dg._documentIgnoreThisClick=true;//标记这次点击触发了beforeCellEditing
 			}
-			evt.stopPropagation();
+			//evt.stopPropagation();
 		});
 	},
 	//提交字段的修改(当在处于编辑态的单元格外点击时，触发提交修改)
