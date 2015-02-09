@@ -49,14 +49,16 @@ cb.model.Model3D = function (parent, name, data) {
     this._focusedRowIndex =-1;
     this._editRowModel = null;
 	
+	
 	//数据记录总数量（如果分页信息返回的总数量和当前值不一致，说明远程数据源有修改，提示保存刷新后再操作）
-	//this._currentTotalCount=undefined;
+	this._currentTotalCount=undefined;//设置数据源后返回的totalCount值，表示远程数据的记录数量
 	
 	//分页请求返回后回调,context指定为this
 	this._pageServerCallBack=$.proxy(function(success,fail){
 		if(success){
 			var data=success;
-			if(this._dataSource.length!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
+			
+			if(this._currentTotalCount&&this._currentTotalCount!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
 			if(data._pageStart==undefined){
 				var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
 				data._pageStart=pageInfo.pageStart;
@@ -642,8 +644,7 @@ $.extend(cb.model.Model3D.prototype,{
 	分页为了是视图有缓冲带，会要求分页数据之间有部分重叠）
 	分页是数据展示的一种方式，独立与数据来源。
 	*/
-	
-	
+
 	//更新显示的数据行
 	_refreshDisplay:function(){
 		var pageRows=this._getCurrentPageRows();
@@ -664,6 +665,7 @@ $.extend(cb.model.Model3D.prototype,{
 	_getPageServer:function(){
 		return this._pageServer;
 	},
+
 	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
 	_isRemote:function(){
 		return this.get('mode').toLowerCase()==='remote';
@@ -686,7 +688,7 @@ $.extend(cb.model.Model3D.prototype,{
 			queryParams=queryParams||{};
 			this._pageServer=pageServer;
 			this._queryParams=queryParams;
-
+			
 			if(pageData){//有一页数据了，就不自动请求
 				var data=pageData;
 				//更新datasource长度和内容
@@ -694,7 +696,9 @@ $.extend(cb.model.Model3D.prototype,{
 				this._rowsDataState=new Array(data.totalCount);
 				pageData._pageStart=0;
 				pageData._dsStart=0;
-			
+				//更新远程数据源后，重置远程数据源记录数
+				this._currentTotalCount=data.totalCount;
+				
 				this._pageServerCallBack(data);
 				if(callback)callback();
 			}else{//自动请求一页数据
@@ -709,7 +713,7 @@ $.extend(cb.model.Model3D.prototype,{
 						return;
 					}
 					var data=success;
-					
+					this._currentTotalCount=data.totalCount;
 					//更新datasource长度和内容
 					this._dataSource=new Array(data.totalCount);
 					this._rowsDataState=new Array(data.totalCount);
@@ -765,29 +769,40 @@ $.extend(cb.model.Model3D.prototype,{
 		var Missing=cb.model.DataState.Missing;
 		var Delete=cb.model.DataState.Delete;
 		var indexInds=indexInfo.indexInDs;
-		var i=indexInfo;
-		while(rowDataState[i]!==Missing){
-			if(rowDataState[i]!==Delete)count++;
+		var i=indexInfo.indexInDs;
+		var len=rowDataState;
+		//记录要展示的页中已有几条记录（肯定不会多余一页数据，否则不需要请求远程数据了，也就不好调用这个方法）
+		while(i<len&&rowDataState[i]!==Missing){
+			if(rowDataState[i]!==Delete)count++;//如果要请求的数据中一部分已经在客户端删除，则要多请求一条记录，因为被删除的不会显示
 			i++;
 		}
-		needCount=Math.max(0,pageSize-count);//需要请求的记录数
+		needCount=Math.max(0,pageSize-count);//需要请求的记录数，每次最少请求20条数据，避免多次请求少尺寸的页面数据
+		//needCount=Math.max(20,pageSize-count);
+		var j=needCount;
+		//统计实际需要请求多少条数据，因为要请求的数据中可能有些在之前已经在客户端的删除操作删了，这时需要额外多请求一条数据
+		while(j&&i<len){
+			if(rowDataState[i]!==Delete)needCount++;//如果要请求的数据中一部分已经在客户端删除，则要多请求一条记录，因为被删除的不会显示
+			if(rowDataState[i]!==Add&&rowDataState[i]!==Delete)j--;//如果发现一条未被删除的远程数据，则说明以找到一条远程数据
+			i++;
+		}
+		
 		var pageIndexInRemote,pageSizeInRemote;
 		var startIndexInRemote=indexInfo.remoteRowCountBefore;
-		var pageCountBefore=Math.ceil((startIndexInRemote+1)/needCount)+1;//看要请求的第一条记录在第几页中
-		if((startIndexInRemote+1)%needCount)pageCountBefore--;
+		var pageNum=Math.ceil((startIndexInRemote+1)/needCount);//看要请求的第一条记录在第几页中
+		//if((startIndexInRemote+1)%needCount)pageCountBefore--;
 		//要请求的第一条数据在返回页中的索引
 		var indexInResponse;
-		if((pageCountBefore-1)%2===0){//如果要请求的第一条记录在基数页中，则pageIndex指向这条记录所在页的前一页
+		if((pageNum-1)%2===0){//如果要请求的第一条记录在基数页中，则pageIndex指向这条记录所在页,pageSize设为当前页的2倍
 			pageSizeInRemote=2*needCount;
-			pageIndexInRemote=(pageCountBefore-1)/2;
+			pageIndexInRemote=(pageNum-1)/2;
 			indexInResponse=startIndexInRemote%pageSizeInRemote;
-		}else if((pageCountBefore-1)%3===0){//在偶数页中，且前面有3的整数倍页，则pagesise设为当前页的3倍
+		}else if((pageNum-1)%3===0){//在偶数页中，且前面有3的整数倍页，则pagesise设为当前页的3倍
 			pageSizeInRemote=3*needCount;
-			pageIndexInRemote=(pageCountBefore-1)/3;
+			pageIndexInRemote=(pageNum-1)/3;
 			indexInResponse=startIndexInRemote%pageSizeInRemote;
 		}else{
 			pageSizeInRemote=2*needCount;
-			pageIndexInRemote=pageCountBefore/2-1;
+			pageIndexInRemote=pageNum/2-1;
 			indexInResponse=startIndexInRemote%pageSizeInRemote;
 		}
 		return {
@@ -866,8 +881,14 @@ $.extend(cb.model.Model3D.prototype,{
 			if(!_inner){this._refreshDisplay(beforeRender,afterRender);}
 		}
 	},
+	//获取本地数据源中记录数量
 	getTotalCount:function(){
-		return this._getDataSource().length;
+		var rowDataState=this._rowsDataState,
+			Delete=cb.model.DataState.Delete;
+		for(var count=rowDataState.length,i=rowDataState.length-1;i>=0;i--){
+			if(rowDataState[i]===Delete)count--;
+		}
+		return count;
 	},
 	gotoPage:this.setPageIndex,
 	getPageIndex:function(){
@@ -1133,6 +1154,8 @@ $.extend(cb.model.Model3D.prototype,{
 	},
 	
 	deleteRows:function(rowIndexs){
+		if(!cb.isArray(rowIndexs))rowIndexs=Array.prototype.slice.call(arguments,0);
+		
 		var rows=this._getRowsByIndexs(rowIndexs);
 		if (!this._before("deleteRows", rows))return false;
 		
@@ -1144,15 +1167,15 @@ $.extend(cb.model.Model3D.prototype,{
 			Delete=cb.model.DataState.Delete,
 			rowIndex,
 			indexInDs;
-		for(var i=rowIndexs.length;i;i--){
+		for(var i=rowIndexs.length-1;i>=0;i--){
 			rowIndex=rowIndexs[i];
-			if (rowIndex < 0||rowIndex>=rowsInPage.length){
+			if (rowIndex >= 0&&rowIndex<rowsInPage.length){
 				indexInDs=ds.indexOf(rowsInPage[rowIndex]);
 				if(rowDataState[indexInDs]===Add){//如果是新添加的记录，直接删除
 					rowDataState.splice(indexInDs,1);
 					ds.splice(indexInDs,1);
 				}else{
-					rowDataState[indexInDs]==Delete;
+					rowDataState[indexInDs]=Delete;
 				}
 			}
 		}
@@ -1163,9 +1186,9 @@ $.extend(cb.model.Model3D.prototype,{
 	_getRowsByIndexs:function(rowIndexs){
 		var rows=[];
 		var rowsInPage=this._data.rows;
-		$.each(rowIndexs,function(i,rowIndex){
-			rows.push(rowsInPage[rowIndex]);
-		});
+		for(var i=0,len=rowIndexs.length;i<len;i++){
+			rows.push(this.getRow(rowIndexs[i]));
+		}
 		return rows;
 	},
 
