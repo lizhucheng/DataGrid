@@ -557,6 +557,14 @@ DataGrid.prototype={
 					rows=dg._getRows(),
 					index=rows.indexOf(row);
 				dg.setFocusedRow(index);
+				dg.execute('clickRow',index);//对外提供点击行事件
+			});
+		//双击行
+		this.$el.on('dblclick','.viewBody tr[data-role=row]',function(evt){
+				var row=$(this).closest('tr')[0],
+					rows=dg._getRows(),
+					index=rows.indexOf(row);
+				dg.execute('dblClickRow',index);//对外提供点击行事件
 			});
 		//点击单元格
 		this.$el.on('click','.viewBody .cell',function(evt){

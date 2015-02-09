@@ -194,61 +194,18 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		var rowData=this.getModel().getRow(data.rowIndex);
 		control.updateCell(data.rowIndex,data.cellName,data.value,rowData);
 	};
-    this._onAddNewRow = function (rowIndex) {
-        var model = this.getModel();
-        if (!model) return;
-        if (rowIndex == null) rowIndex = model.getRows().length;
-        if (model.insert) model.insert(rowIndex);
-    };
+	//支持监听clickRow dblClickRow事件
+	this._onClickRow=function(index){
+		var model=this.getModel();
+		var rowData=model.getRow(index);
+		model.execute('clickRow',{row:rowData,index:index});
+	};
+	this._onDblClickRow=function(index){
+		var model=this.getModel();
+		var rowData=model.getRow(index);
+		model.execute('dblClickRow',{row:rowData,index:index});
+	};
 
-    this._onDeleteRows = function (rowIndexes) {
-        var model = this.getModel();
-        if (!model) return;
-        if (model.remove) model.remove(rowIndexes);
-    };
-
-    this._onShowCardView = function () {
-        var model = this.getModel();
-        var control = this.getControl();
-        if (!model || !control) return;
-        control.showCardView(model);
-    };
-
-    this._onCellEditorLoad = function (column, controlId) {
-        var model = this.getModel();
-        if (!model) return;
-        var viewBinding = this._getEditRowModelContainerBinding(model.getEditRowModel());
-        viewBinding.add({ controlId: controlId, controlType: column.columnType, propertyName: column.id, bindingMode: "TwoWay" });
-    };
-
-    this._onCellEditorDestroy = function (controlId) {
-        var model = this.getModel();
-        if (!model) return;
-        var viewBinding = this._getEditRowModelContainerBinding(model.getEditRowModel());
-        viewBinding.remove(controlId);
-    };
-
-    this._getEditRowModelContainerBinding = function (viewModel) {
-        this._editRowModelContainerBinding = this._editRowModelContainerBinding || cb.viewbinding.create("cell", viewModel);
-        return this._editRowModelContainerBinding;
-    };
-
-
-    this._onActiveRowClick = function (args) {
-        var model = this.getModel();
-        if (!model || !model.fireEvent) return;
-        var activeRowIndex = args.row;
-        if (activeRowIndex == null) return;
-        var activeRow = model.getRows()[activeRowIndex];
-        if (!activeRow) return;
-        model.fireEvent("onActiveRowClick", activeRow);
-    };
-
-    this._onQuerySchemeChanged = function (args) {
-        var model = this.getModel();
-        if (!model || !model.fireEvent) return;
-        model.fireEvent("onQuerySchemeChanged", args);
-    };
 
     this.applyBindings = function () {
         var model = this.getModel();
@@ -276,23 +233,12 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 			control.on("beforeCellEditing", this._onBeforeCellEditing, this);
 			control.un("cellChange", this._onCellChange);
             control.on("cellChange", this._onCellChange, this);
+			control.un("clickRow", this._onClickRow);
+            control.on("clickRow", this._onClickRow, this);
+			control.un("dblClickRow", this._onDblClickRow);
+            control.on("dblClickRow", this._onDblClickRow, this);
+			//
 
-			
-            control.un("onAddNewRow", this._onAddNewRow);
-            control.on("onAddNewRow", this._onAddNewRow, this);
-            control.un("onDeleteRows", this._onDeleteRows);
-            control.on("onDeleteRows", this._onDeleteRows, this);
-            control.un("onShowCardView", this._onShowCardView);
-            control.on("onShowCardView", this._onShowCardView, this);
-            control.un("onCellEditorLoad", this._onCellEditorLoad);
-            control.on("onCellEditorLoad", this._onCellEditorLoad, this);
-            control.un("onCellEditorDestroy", this._onCellEditorDestroy);
-            control.on("onCellEditorDestroy", this._onCellEditorDestroy, this);
-
-            control.un("onActiveRowClick", this._onActiveRowClick);
-            control.on("onActiveRowClick", this._onActiveRowClick, this);
-            control.un("onQuerySchemeChanged", this._onQuerySchemeChanged);
-            control.on("onQuerySchemeChanged", this._onQuerySchemeChanged, this);
         }
         model.addListener(this);
 		//
