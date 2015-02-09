@@ -776,8 +776,8 @@ $.extend(cb.model.Model3D.prototype,{
 			if(rowDataState[i]!==Delete)count++;//如果要请求的数据中一部分已经在客户端删除，则要多请求一条记录，因为被删除的不会显示
 			i++;
 		}
-		needCount=Math.max(0,pageSize-count);//需要请求的记录数，每次最少请求20条数据，避免多次请求少尺寸的页面数据
-		//needCount=Math.max(20,pageSize-count);
+		needCount=Math.max(0,pageSize-count);
+		
 		var j=needCount;
 		//统计实际需要请求多少条数据，因为要请求的数据中可能有些在之前已经在客户端的删除操作删了，这时需要额外多请求一条数据
 		while(j&&i<len){
@@ -785,26 +785,15 @@ $.extend(cb.model.Model3D.prototype,{
 			if(rowDataState[i]!==Add&&rowDataState[i]!==Delete)j--;//如果发现一条未被删除的远程数据，则说明以找到一条远程数据
 			i++;
 		}
+		needCount=Math.max(20,needCount);//需要请求的记录数，每次最少请求20条数据，避免多次请求少尺寸的页面数据
 		
-		var pageIndexInRemote,pageSizeInRemote;
-		var startIndexInRemote=indexInfo.remoteRowCountBefore;
-		var pageNum=Math.ceil((startIndexInRemote+1)/needCount);//看要请求的第一条记录在第几页中
-		//if((startIndexInRemote+1)%needCount)pageCountBefore--;
-		//要请求的第一条数据在返回页中的索引
-		var indexInResponse;
-		if((pageNum-1)%2===0){//如果要请求的第一条记录在基数页中，则pageIndex指向这条记录所在页,pageSize设为当前页的2倍
-			pageSizeInRemote=2*needCount;
-			pageIndexInRemote=(pageNum-1)/2;
-			indexInResponse=startIndexInRemote%pageSizeInRemote;
-		}else if((pageNum-1)%3===0){//在偶数页中，且前面有3的整数倍页，则pagesise设为当前页的3倍
-			pageSizeInRemote=3*needCount;
-			pageIndexInRemote=(pageNum-1)/3;
-			indexInResponse=startIndexInRemote%pageSizeInRemote;
-		}else{
-			pageSizeInRemote=2*needCount;
-			pageIndexInRemote=pageNum/2-1;
-			indexInResponse=startIndexInRemote%pageSizeInRemote;
-		}
+		var pageIndexInRemote,
+			pageSizeInRemote,
+			startIndexInRemote=indexInfo.remoteRowCountBefore;
+
+		pageSizeInRemote=this._computePageSize(indexInfo.remoteRowCountBefore+needCount,needCount);
+		pageIndexInRemote=Math.ceil((indexInfo.remoteRowCountBefore+1)/pageSizeInRemote)-1;
+		indexInResponse=startIndexInRemote%pageSizeInRemote;
 		return {
 			pageIndex:pageIndexInRemote,
 			pageSize:pageSizeInRemote,
@@ -812,6 +801,21 @@ $.extend(cb.model.Model3D.prototype,{
 			dsStart:indexInds
 		};
 		
+	},
+	//求一个分页只，使最后的needCount项在一个完整分页中
+	_computePageSize:function _computePageSize(count,needCount){
+		var start=count-needCount+1;//第一个需要的元素的序数号
+		var power=1;
+		while(power<count){
+			power*=2;
+		}
+		needCount=needCount+power-count;
+		//计算最小的包含需要数量元素的分页大小
+		var size=power;
+		while(size>=needCount){
+			size=size/2;
+		}
+		return size*2;
 	},
 	//尝试获取当前页数据，如果当前页数据不全,返回null
 	_getCurrentPageRows:function(){
