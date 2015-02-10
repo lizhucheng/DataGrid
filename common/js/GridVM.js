@@ -87,12 +87,9 @@ cb.model.Model3D = function (parent, name, data) {
 cb.model.Model3D.prototype = new cb.model.BaseModel();
 cb.model.Model3D.prototype.getPkName = function () {
 	 var columns = this._getColumns()
-	 for (var col in columns) {
-		colData = columns[col];
-		if (!colData || !colData.constructor == Object)
-			continue;
-		if(colData["key"]==true||colData["isKey"]==true)
-			return col
+	 for (var field in columns) {
+		var col = columns[field];
+		if (col && typeof col=='object' &&(col["key"]||col["isKey"])) return field
 	 }
 	 return "id";
 };
@@ -1225,6 +1222,7 @@ $.extend(cb.model.Model3D.prototype,{
 			this.execute("after" + eventName, args);
 		}
 	},
+	/*
 	syncEditRowModel:function (rowIndex, cellName, propertyName, value) {
 		if (rowIndex != this._focusedRowIndex || !cellName) {
 			if (propertyName == "readOnly" || propertyName == "disabled")
@@ -1308,6 +1306,7 @@ $.extend(cb.model.Model3D.prototype,{
 		delete dataCopy.hasData;
 		return dataCopy;
 	}
+	*/
 });
 //内置的排序方式
 cb.model.Model3D.comparators={
