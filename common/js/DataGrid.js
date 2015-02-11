@@ -150,6 +150,7 @@ DataGrid.ROWNOCOL={
 	$name:'__rowNo',
 	type:'Number',
 	width:35,
+	textAlign:'right',
 	readOnly:true,
 	sortable:false,
 	resizable:false
@@ -158,6 +159,7 @@ DataGrid.CHECKBOXCOL={
 	$name:'__chkBox',
 	type:'Boolean',
 	width:35,
+	textAlign:'center',
 	readOnly:true,
 	sortable:false,
 	resizable:false,
@@ -214,25 +216,29 @@ DataGrid.prototype={
 	init:function(opts){
 		opts=opts||{};
 		var fields=opts.fields||[];
+		var frozenField=opts.frozenField||'';
+		delete opts.frozenField;
 		delete opts.fields;
 		$.extend(true,this,opts);
 		this.cols=createColumns(fields);
 		
+		var defalutFrozenField='';
 		var frozenField='';
 		//检查是否有行号列、checkbox列
 		if(this.showCheckBox){
 			this.cols.unshift(new Column(DataGrid.CHECKBOXCOL));
-			frozenField=DataGrid.CHECKBOXCOL[FIELDNAME_PROP];
+			defalutFrozenField=DataGrid.CHECKBOXCOL[FIELDNAME_PROP];
 		}
 		if(this.showRowNo){
 			this.cols.unshift(new Column(DataGrid.ROWNOCOL));	
-			frozenField=frozenField||DataGrid.ROWNOCOL[FIELDNAME_PROP];
+			defalutFrozenField=defalutFrozenField||DataGrid.ROWNOCOL[FIELDNAME_PROP];
 		}
+		
 		this.autoWrap=!!opts.autoWrap;
 		this._rebuildColMap();
 		//初始化固定列边界
 		//如果指定的列存在，则用指定的列作为边界，否则根据是否显示行序号列和checkbox选择相应的列作为固定边界。
-		frozenField=this.getColumn(this.frozenField||'')?this.frozenField:frozenField;
+		frozenField=this.getColumn(frozenField)?frozenField:defalutFrozenField;
 		this._setFrozenField(frozenField,true);
 		
 		this.sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
@@ -585,6 +591,7 @@ DataGrid.prototype={
 	},
 	//提交字段的修改(当在处于编辑态的单元格外点击时，触发提交修改)
 	_commitCellChange:function(){
+		var dg=this;
 		var currentValue=dg._currentEditor.getValue(),
 			initValue=dg._currentEditor.initValue;
 		//移除编辑器

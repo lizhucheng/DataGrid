@@ -13,7 +13,7 @@ cb.model.Model3D = function (parent, name, data) {
 	var defaults={
 		columns:{},
 		ds:[],
-		editable:true,
+		editable:false,
 		editMode:'CellEditor',	//编辑模式:行编辑，单元格编辑
 		//readOnly:true,	//等价于editable属性
 		autoWrap:true,	//自动换行设置
@@ -64,7 +64,7 @@ cb.model.Model3D = function (parent, name, data) {
 				data._pageStart=pageInfo.pageStart;
 				data._dsStart=pageInfo.dsStart;
 			}
-			this._updateDataSource(data.currentPageData,data._dsStart,data._pageStart);
+			this._updateDataSource(data.currentPageData||[],data._dsStart,data._pageStart);
 			this._setPageRows(this._getCurrentPageRows());
 			
 			//通知分页条更新
@@ -79,7 +79,7 @@ cb.model.Model3D = function (parent, name, data) {
 	
 	
 	//非只读模式下关闭一些不能用的功能
-	if(!this._data.editable){
+	if(this._data.editable){
 		delete this._data.mergeState;
 		delete this._data.sortFields;
 	}
@@ -110,11 +110,14 @@ cb.model.Model3D.prototype.setData = function (data) {
         tempData[arguments[0]] = arguments[1];
         data = tempData;
     }
-    //var _data = { readOnly: true, Columns: { ID: {}, Code: {} }, Rows: [{ ID: 1, Code: 111 }, { ID: 222, Code: { value: 12, readOnly: 1}}], FocusedRow: null, FocusedIndex: 1 };
-    if (data.Rows) {
-        //this.add(data.Rows, true);
-        this.setRows(data.Rows);
-        delete data.Rows;
+	if(cb.isArray(data)){
+		data={dataSource:data};
+	}
+    //var _data = { readOnly: true, columns: { ID: {}, Code: {} }, dataSource: [{ ID: 1, Code: 111 }, { ID: 222, Code: { value: 12, readOnly: 1}}],  focusedIndex: 1 };
+    
+	if (data.dataSource) {
+        this.setDataSource(data.dataSource);
+        delete data.dataSource;
     }
     if (data.Columns) {
         for (var column in data.Columns) {
@@ -143,7 +146,8 @@ cb.model.Model3D.prototype.setData = function (data) {
 cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyData) {
     var pkName = this.getPkName();
     var tsName = this.getTsName();
-    if (onlyCollectDirtyData && propertyName == "value") {
+    if (onlyCollectDirtyData && propertyName == "value") {//仅收集变动的数据(添加的行，删除的pk，修改的字段值)
+	/*
         var datas = [];
         var rows = this._data.rows; ////this._data.Cache;???//多页数据怎么处理
         var length = rows.length;
@@ -184,36 +188,50 @@ cb.model.Model3D.prototype.getData = function (propertyName, onlyCollectDirtyDat
         }
 
         return datas;
+		*/
     }
     else {
         if (propertyName == "value") {
-            var rows = this._data.rows.clone(); //this._data.Cache;???//多页数据怎么处理
-            if (this._data.rows.length == 0) rows.length = 0;
+            var rows = this._dataSource.clone(); 
+			
+            if (this._data.rows.length == 0){rows.length = 0;return [];}
+			var rowDataState=this._rowsDataState,
+				Delete=cb.model.DataState.Delete,
+				Update=cb.model.DataState.Update,
+				Add=cb.model.DataState.Add,
+				dataState,
+
+				pk=this.getPkName(),
+				ts=this.getTsName();
+				
             for (var i = 0; i < rows.length; i++) {
-                delete rows[i].readOnly;
-                delete rows[i].disabled;
-                for (var attr in rows[i]) {
-                    var cell = rows[i][attr];
-                    rows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
-                }
-                rows[i].state = rows[i].state == null ? cb.model.DataState.Unchanged : rows[i].state;
-            }
-            //删除行的处理,删除行只收集id、ts、state
-            var deleteRows = this._data.DeleteRows || [];
-            for (var i = 0; i < deleteRows.length; i++) {
-                delete deleteRows[i].readOnly;
-                delete deleteRows[i].disabled;
-                for (var attr in deleteRows[i]) {
-                    var cell = deleteRows[i][attr];
-                    deleteRows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.Value;
-                }
-                deleteRows[i].state = cb.model.DataState.Delete;
-                rows.push(deleteRows[i]);
-            }
-            return rows;
+				dataState=rowDataState[i];
+				
+				if(dataState===Update||dataState===Add){
+					delete rows[i].readOnly;
+					delete rows[i].disabled;
+					
+					for (var attr in rows[i]) {
+						var cell = rows[i][attr];
+						rows[i][attr] = (cb.isEmpty(cell) || typeof cell != "object") ? cell : cell.value;
+					}
+					rows[i].state = dataState;
+					rows.push(rows[i]);
+				}else if(dataState===Delete){//删除行的处理,删除行只收集id、ts、state
+					delete rows[i].readOnly;
+					delete rows[i].disabled;
+					
+					var row={};
+					row[pk]=rows[i][pk];
+					row[ts]=rows[i][ts];
+					row.state=Delete
+					
+					rows.push(row);
+				}
+			}
         }
         else {
-            return this._data.rows;
+            //return this._data.rows;
         }
     }
 }
@@ -651,6 +669,7 @@ $.extend(cb.model.Model3D.prototype,{
 			this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "pageInfo", this.getPageInfo()));
 		}else{//数据不全在本地
 			var pageServer=this._getPageServer();
+			if(!pageServer)return;
 			var params=$.extend({},this._queryParams);
 			var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
 			params.pageSize=pageInfo.pageSize;
@@ -723,7 +742,15 @@ $.extend(cb.model.Model3D.prototype,{
 				},this));
 			}
 		}else{//data为datasource结构
-			this._dataSource=cb.isArray(data)?data:[];
+			var data=pageServer;
+			data=cb.isArray(data)?data:[];
+			this._dataSource=cb.clone(data);
+			var Unchanged=cb.model.DataState.Unchanged;
+			//初始化行数据状态
+			var rowDataState=this._rowsDataState=new Array(data.length);
+			for(var i=rowDataState.length-1;i>=0;i--){
+				rowDataState[i]=Unchanged;
+			}
 			this._refreshDisplay();
 			if(callback)callback();
 		}
@@ -820,10 +847,25 @@ $.extend(cb.model.Model3D.prototype,{
 		var ds=this._getDataSource();
 		var Missing=cb.model.DataState.Missing;
 		var Delete=cb.model.DataState.Delete;
+
 		var pageIndex=this._data.pageIndex,
-			pageSize=this._data.pageSize,
-			i=this._getIndexInDs(pageSize*pageIndex).indexInDs,
+			pageSize=this._data.pageSize;
+		
+		if(pageSize<0){
+			var rows=[],ds=this._dataSource;
+			var rowsDataState=this._rowsDataState,
+				Delete=cb.model.DataState.Delete;
+			for(var i=0,len=ds.length;i<len;i++){
+				if(rowsDataState[i]!==Delete){
+					rows.push(ds[i]);
+				}
+			}
+			return rows;
+		}
+		//分页时
+		var	i=this._getIndexInDs(pageSize*pageIndex).indexInDs,
 			count=pageSize;
+
 		for(var len=ds.length;i<len&&count>0;i++){
 			if(this._rowsDataState[i]!==Delete){//如果这条数据被来自于远程的数据在编辑过程中被删除了，则已经不再本地数据源中了
 				if(this._rowsDataState[i]!=Missing){
@@ -1222,6 +1264,9 @@ $.extend(cb.model.Model3D.prototype,{
 			this.execute("after" + eventName, args);
 		}
 	},
+	setRows:function(ds){
+		this.setDataSource(ds);
+	},
 	/*
 	syncEditRowModel:function (rowIndex, cellName, propertyName, value) {
 		if (rowIndex != this._focusedRowIndex || !cellName) {
@@ -1307,6 +1352,7 @@ $.extend(cb.model.Model3D.prototype,{
 		return dataCopy;
 	}
 	*/
+	__end:''
 });
 //内置的排序方式
 cb.model.Model3D.comparators={

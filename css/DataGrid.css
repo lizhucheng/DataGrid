@@ -1,10 +1,12 @@
 .grid{
 	position:relative;
 	overflow:hidden;
+	height:100%;
 }
-.grid .hidden{
-	display:none;
+.grid *{
+    box-sizing:content-box;
 }
+.grid .hidden {display:none;}
 /*内容区行交互样式*/
 /*必需给cellBorder设置背景色，否则活动的列中的单元格在水平滚动时，会由于滚定列中的单元格无背景（默认透明）而可见*/
 .grid  tbody  tr,
