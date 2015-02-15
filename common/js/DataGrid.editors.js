@@ -90,7 +90,27 @@ var ComboxEditor=$.extend({},Editor,{
 });
 
 var NumberBoxEditor=$.extend({},Editor,{
-
+	init: function(container, options){
+		if(!this.el){
+			this.el=$('<div class="cellEdtior NumberBoxEditor"><div class="ui-field-contain"><div><input  data-controltype="NumberBox" type="text" /></div></div></div>').appendTo(container)[0];
+			this.target=new cb.controls['NumberBox']($(this.el).find('[data-controltype=NumberBox]'));
+			//时间处理
+		}else{
+			container.appendChild(this.el);
+		}
+		
+		if(options){
+			this.target.setData(options);
+		}
+		this.target.getElement().children('div').trigger('click');
+		//根据配置信息初始化editor
+	},
+	getValue: function(){
+		return this.target.getValue();
+	},
+	setValue: function(value){
+		this.target.setValue(value);
+	}
 });
 var DateTimeEditor=$.extend({},Editor,{
 	init: function(container, options){

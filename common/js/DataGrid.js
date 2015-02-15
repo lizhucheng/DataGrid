@@ -175,7 +175,7 @@ DataGrid.TEMPLATE='<div class="view">\
 		</div>\
 	</div>\
 	<div class="viewBody">\
-		<table><thead></thead><tbody></tbody></table>\
+		<table data-role="gridBody"><thead></thead><tbody></tbody></table>\
 		<div class="refLine"></div>\
 		<div class="frozenBoundary"><div></div></div>\
 	</div>\
@@ -242,11 +242,11 @@ DataGrid.prototype={
 		this._setFrozenField(frozenField,true);
 		
 		this.sortFields=[];//元素为数组，数组第一个分量为字段名，第二个为1或-1;
-		this.render(opts.rows);
 		
-		if(this.editable&&this.editMode=='CellEditor'&&!this.editors){
-			this._cellEditors=$.extend(true,{},DataGrid.cellEditors);//创建每种类型的编辑器实例;//避免被模型中的属性覆盖，加_;
-		}
+		this._cellEditors=$.extend(true,{},DataGrid.cellEditors);//创建每种类型的编辑器实例;//避免被模型中的属性覆盖，加_;
+		
+		this.render(opts.rows);
+
 	},
 	//只设置状态，不改变视图
 	_setFrozenField:function(field,inner){
@@ -670,7 +670,7 @@ DataGrid.prototype={
 			$el=this.$el;
 		
 		$('.viewBody',$el).hide();
-		$('.viewBody tbody',$el).html(html);
+		$('.viewBody>table>tbody', $el).html(html);
 		if(this.getMergeState()){
 			this.mergeCells(this._getMergeCells(data));
 		}
@@ -966,7 +966,9 @@ DataGrid.prototype={
 	},
 	setData:function(data){
 		//数据适配
-		var options=$.extend({},data);		
+	    var options = $.extend({}, data);
+	    options.editable = !options.readOnly;
+	    delete options.readOnly;
 		var fields=[];
 		
 		var fieldName,fieldInfo;
@@ -1044,10 +1046,8 @@ DataGrid.prototype={
 			$.each(arr,function(i,row){
 				row.cells[chkFieldIndex].getElementsByTagName('input')[0].checked=true;
 			});
-			if(this._isAllChecked()){
-				//此处不能用.attr('checked',true),浏览器存在bug，只有第一次通过属性设置checkbox/radio的checked属性时有效
-				$('.header .chkAll input',this.$el)[0].checked=true;
-			}
+		    //此处不能用.attr('checked',true),浏览器存在bug，只有第一次通过属性设置checkbox/radio的checked属性时有效
+			$('.header .chkAll input', this.$el)[0].checked = this._isAllChecked() ? true : false;
 		}
 		
 		this.execute('select',rowIndexs);
@@ -1134,8 +1134,9 @@ DataGrid.prototype={
 		return [].slice.call($('.viewBody table',this.$el)[0].rows,1);
 	},
 	//判断是否选中了所有展示的行
-	_isAllChecked:function(){
-		return this.getSelectedRows().length===this._getRows().length;
+	_isAllChecked: function () {
+	    var selected = this.getSelectedRows();
+	    return selected.length && selected.length === this._getRows().length;//没有选中行时，全选不选
 	},
 	//单元格编辑模式下，一个时间点最多有一个编辑器；cellEditorWrapper控制样式，提供一个环境；
 	_setCellEditing:function(field,rowIndex,dataContext){
@@ -1200,6 +1201,9 @@ DataGrid.prototype={
 		var col=this._nameColMap[field];
 		var html=this._getTdCellOuterHtml2(this.getColumn(field),value,rowData);
 		$(td).replaceWith(html);
+	},
+	setEditable: function (editable) {
+	    this.editable = !!editable;
 	},
 	
 	___end:''

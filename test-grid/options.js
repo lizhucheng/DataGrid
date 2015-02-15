@@ -24,7 +24,7 @@ var options={
 		pageSize:50,
 		pageIndex:0,
 
-		pager:'.pager1',
+		pager:'pager1',
 		//所有列的定义(有序)
 		/*
 		columns:{

@@ -12,10 +12,10 @@ cb.model.Model3D = function (parent, name, data) {
     this._listeners = [];
 	var defaults={
 		columns:{},
-		ds:[],
-		editable:false,
+		dataSource:[],
+		//editable:false,
 		editMode:'CellEditor',	//编辑模式:行编辑，单元格编辑
-		//readOnly:true,	//等价于editable属性
+		readOnly:true,	//作用等价于editable属性
 		autoWrap:true,	//自动换行设置
 		mergeState:false,	//合并显示设置
 		multiSort:true,
@@ -23,11 +23,11 @@ cb.model.Model3D = function (parent, name, data) {
 		showCheckBox:true,	//是否显示checkbox列
 		showRowNo:true,		//是否显示行号
 		//frozenField:undefined,
-		mode:'Remote',//默认数据源来自于远程 'Remote'/'Local'
+		dsMode:'Remote',//默认数据源来自于远程 'Remote'/'Local'
 		//pageServer: '',//远程数据须指定对应的数据服务
 		pageSize:50,//-1表示不分页
 		pageIndex:0,
-		pager:'.pager'//默认分页条视图为viewmodel下的 .pager元素,
+		pager:'pager'//默认分页条视图为viewmodel下的 .pager元素,
 		
 	};
 	this._data=$.extend(defaults,this._data);
@@ -38,8 +38,8 @@ cb.model.Model3D = function (parent, name, data) {
 	Rows和dataSource交互，从中获取数据，Rows保留dataSource中行数据的引用，使修改同步；dataSource内部和服务端交互，负责从服务端请求页数据和提交本地修改。
 	dataSource提供分页配置管理。
 	*/
-	this._dataSource=this._data.ds||[];
-	delete this._data.ds;
+	this._dataSource=this._data.dataSource||[];
+	delete this._data.dataSource;
 	//当前页面展示的数据
 	this._data.rows=[];
 	//初始化行数据状态
@@ -79,7 +79,7 @@ cb.model.Model3D = function (parent, name, data) {
 	
 	
 	//非只读模式下关闭一些不能用的功能
-	if(this._data.editable){
+	if(!this.getReadOnly()){
 		delete this._data.mergeState;
 		delete this._data.sortFields;
 	}
@@ -119,16 +119,10 @@ cb.model.Model3D.prototype.setData = function (data) {
         this.setDataSource(data.dataSource);
         delete data.dataSource;
     }
-    if (data.Columns) {
-        for (var column in data.Columns) {
-            columnData = data.Columns[column];
-            if (!columnData || !columnData.constructor == Object)
-                continue;
-            for (var propertyName in columnData) {
-                this.setColumnState(column, propertyName, columnData[propertyName]); //需要考虑批量操作
-            }
-        }
-        delete data.Columns;
+    if (data.columns) {
+        this.setColumns(data.columns,cb.isArray(data.fieldNames)?data.fieldNames:null);
+        delete data.columns;
+        delete data.fieldNames;
     }
     for (var attr in data) {
         value = data[attr];
@@ -313,7 +307,7 @@ $.extend(cb.model.Model3D.prototype,{
 			if (oldValue === value)
 				return;
 
-			var data = { rowIndex: rowIndex, cellName: cellName, value: value, oldValue: oldValue };
+			var data = { index: rowIndex, field: cellName, value: value, oldValue: oldValue };
 			if (!this._before("CellChange", data))
 				return false;
 			if (cellIsObject)
@@ -340,7 +334,7 @@ $.extend(cb.model.Model3D.prototype,{
 
 				this._data[propertyName] = value;
 
-				var args = new cb.model.PropertyChangeArgs(this._name, propertyName, value,oldValue);
+				var args = new cb.model.PropertyChangeArgs(this._name, 'stateChange', data);
 				this.PropertyChange(args);
 
 				this._after("stateChange", data);
@@ -352,7 +346,7 @@ $.extend(cb.model.Model3D.prototype,{
 				if (oldValue === value)
 					return false;
 
-				var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue, columns: cb.clone(this._data.columns) };
+				var data = { index: rowIndex, field: cellName, propertyName: propertyName, value: value, oldValue: oldValue, columns: cb.clone(this._data.columns) };
 				if (!this._before("fieldStateChange", data))
 					return false;
 				
@@ -371,7 +365,7 @@ $.extend(cb.model.Model3D.prototype,{
 				if (oldValue === value)
 					return;
 
-				var data = { rowIndex: rowIndex, propertyName: propertyName, value: value, oldValue: oldValue };
+				var data = { index: rowIndex, propertyName: propertyName, value: value, oldValue: oldValue };
 				if (!this._before("rowStateChange", data))
 					return false;
 
@@ -396,7 +390,7 @@ $.extend(cb.model.Model3D.prototype,{
 				if (oldValue === value)
 					return;
 
-				var data = { rowIndex: rowIndex, cellName: cellName, propertyName: propertyName, value: value, oldValue: oldValue };
+				var data = { index: rowIndex, field: cellName, propertyName: propertyName, value: value, oldValue: oldValue };
 				if (!this._before("fieldStateChange", data))
 					return false;
 
@@ -538,7 +532,7 @@ $.extend(cb.model.Model3D.prototype,{
 		//根据模型设置的排序规则，对数据行排序，返回排序后的行对象数组
 	_sort:function(rows){
 		var fields=this.getSortFields();
-		if(this._data.editable||!fields.length)return rows;
+		if (!this.getReadOnly() || !fields.length) return rows;
 		var model3d=this,
 			Model3D=cb.model.Model3D;
 			columns=this._getColumns();
@@ -623,11 +617,12 @@ $.extend(cb.model.Model3D.prototype,{
 
 		this.set(rowIndex, cellName, "readOnly", value);
 	},
+    //没有disabled属性
 	getDisabled:function (rowIndex, cellName) {
-		return this.get(rowIndex, cellName, "disabled");
+	    return false;
 	},
-	setDisabled:function (rowIndex, cellName, value) {
-		this.set(rowIndex, cellName, "disabled", value);
+	setDisabled: function (rowIndex, cellName, value) {
+
 	},
 	getState:function (rowIndex, cellName, propertyName) {
 		return propertyName ? this.get(rowIndex, cellName, propertyName) : null;
@@ -684,7 +679,7 @@ $.extend(cb.model.Model3D.prototype,{
 
 	//数据是否直接来源与服务端，如果不是，不接受设置分页查询代理
 	_isRemote:function(){
-		return this.get('mode').toLowerCase()==='remote';
+		return this.get('dsMode').toLowerCase()==='remote';
 	},
 
 	//rows为对应的页数据，根据model的设置（页过滤规则，排序规则），得到页面展示的数据
@@ -700,7 +695,10 @@ $.extend(cb.model.Model3D.prototype,{
 	//如果没提供单页数据时，自动请求一页数据
 	setDataSource:function(pageServer,queryParams,pageData,callback){
 		if(this._isRemote()){
-			
+		    if (typeof pageServer !== 'function') {
+		        //console.error('');
+		        return;
+		    }
 			queryParams=queryParams||{};
 			this._pageServer=pageServer;
 			this._queryParams=queryParams;
@@ -925,7 +923,7 @@ $.extend(cb.model.Model3D.prototype,{
 		}
 	},
 	//获取本地数据源中记录数量
-	getTotalCount:function(){
+	getTotalCount: function () {
 		var rowDataState=this._rowsDataState,
 			Delete=cb.model.DataState.Delete;
 		for(var count=rowDataState.length,i=rowDataState.length-1;i>=0;i--){
@@ -1103,7 +1101,7 @@ $.extend(cb.model.Model3D.prototype,{
 			field=data.field;
 		var readOnly=this.getReadOnly(index,field);
 		if(readOnly)return;
-		var evtArg={record:this.getRow(index),field:field,index:index}
+		var evtArg={row:this.getRow(index),field:field,index:index}
 		if (!this._before("CellEditing",evtArg))return;//提供编辑前预处理机制，可用于编辑前的校验（有时候编辑字段之间存在依赖关系，例如某些值不空时才能编辑对应字段）
 		this.setFocusedIndex(index);
 		this.PropertyChange(new cb.model.PropertyChangeArgs(this._name, "cellEditing", evtArg));	
@@ -1113,16 +1111,20 @@ $.extend(cb.model.Model3D.prototype,{
 	getCellValue:function (rowIndex, cellName) {
 		return this.get(rowIndex, cellName);
 	},
-	setCellValue:function (rowIndex, cellName, value) {
+	setCellValue: function (rowIndex, cellName, value) {
+	    if (this.getReadOnly()) return;
+
 		return this.set(rowIndex, cellName, null, value);
 	},
 	//插入行：只有编辑态下才能执行该操作，编辑态下不支持排序，过滤等操作，
-	insertRow:function(rowIndex,rowData){
-		var rowsInPage=this._data.rows;
-		rowData=cb.clone(rowData);//使用副本
+	insertRow: function (rowIndex, rowData) {
+	    if (this.getReadOnly()) return;
+
+	    rowData = $.extend(true, this._getDefaultRowData(), rowData || {});
+	    var rowsInPage = this._data.rows;
 		rowIndex=Math.min(rowsInPage.length,Math.max(0,rowIndex));//0<=rowIndex<=this._data.rows.length;
 		//插入新行前提供校验机制
-		if (!this._before("insertRow", { rowIndex: rowIndex, rowData: rowData }))return false;
+		if (!this._before("insertRow", { index: rowIndex, row: rowData }))return false;
 		//计算在ds中的位置
 		var ds=this._dataSource,
 			indexInDs;
@@ -1140,55 +1142,86 @@ $.extend(cb.model.Model3D.prototype,{
 		this._refreshDisplay();
 		this._after("insertRow");
 	},
-	appendRow:function(rowData){//分页时可能最后一页数据还在远程服务器
-		if (!this._before("insertRow", { rowIndex: rowIndex, rowData: rowData }))return false;
+    //获取增加行时的默认行数据
+	_getDefaultRowData: function () {
+	    var rowData = {};
+	    var cols=this._getColumns();
+	    for (var field in cols) {
+	        if (cols && cols.defaultValue) {
+	            rowData = cols.defaultValue;
+	        }
+	    }
+	    return rowData;
+	},
+	appendRow: function (rowData) {//分页时可能最后一页数据还在远程服务器
+	    if (this.getReadOnly()) return;
+
+	    rowData = $.extend(true,this._getDefaultRowData(),rowData ||{});
+	    if (!this._before("insertRow", { index: rowIndex, row: rowData })) return false;
+	    
 		var pageSize=this.getPageSize();
 		var rowIndex;
-		if(pageSize!==-1){//分页
-			//跳转到最后一页
+		
+		if (pageSize >0) {//分页
 			
-			var pageServer=this._getPageServer();
-			var params=$.extend({},this._queryParams);
-			var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
-			params.pageSize=pageInfo.pageSize;
-			params.pageIndex=pageInfo.pageIndex+1;
-			//pageServer(params,this._pageServerCallBack);
-			//此处重新定义数据返回后的逻辑，以减少页面的多次渲染
-			pageServer(params,$.proxy(function(success,fail){
-				if(success){
-					var data=success;
-					if(this._dataSource.length!==data.totalCount){alert('grid中数据已过期，保存刷新后再处理');return;}
-					if(data._pageStart==undefined){
-						var pageInfo=this._getRemotePageInfo(this.getPageSize(),this.getPageIndex());
-						data._pageStart=pageInfo.pageStart;
-						data._dsStart=pageInfo.dsStart;
-					}
-					this._updateDataSource(data.currentPageData,data._dsStart,data._pageStart);
-					
-					this._dataSource.push(rowData);
-					this._rowsDataState.push(cb.model.DataState.Add);
-					var totalCount=data.totalCount,
-						pageSize=this.getPageSize();
-					var lastPageSize=totalCount%pageSize;
-					lastPageSize=lastPageSize?lastPageSize:pageSize;
-					
-					this._focusedRowIndex=lastPageSize-1;
-					this.setPageIndex(this.getPageCount()-1,true);
-					this._after("insertRow");
-				}else{
-					alert(fail.message);
-				}
-			},this));
+		    if (this._isRemote()) {//有远程数据的分页
+		        //跳转到最后一页
+		        var pageServer = this._getPageServer();
+		        //var pageServer=this._getPageServer();
+		        var params = $.extend({}, this._queryParams);
+		        var pageInfo = this._getRemotePageInfo(this.getPageSize(), this.getPageIndex());
+		        params.pageSize = pageInfo.pageSize;
+		        params.pageIndex = pageInfo.pageIndex + 1;
+		        //pageServer(params,this._pageServerCallBack);
+		        //此处重新定义数据返回后的逻辑，以减少页面的多次渲染
+		        pageServer(params, $.proxy(function (success, fail) {
+		            if (success) {
+		                var data = success;
+		                if (this._dataSource.length !== data.totalCount) { alert('grid中数据已过期，保存刷新后再处理'); return; }
+		                if (data._pageStart == undefined) {
+		                    var pageInfo = this._getRemotePageInfo(this.getPageSize(), this.getPageIndex());
+		                    data._pageStart = pageInfo.pageStart;
+		                    data._dsStart = pageInfo.dsStart;
+		                }
+		                this._updateDataSource(data.currentPageData, data._dsStart, data._pageStart);
+
+		                this._dataSource.push(rowData);
+		                this._rowsDataState.push(cb.model.DataState.Add);
+		                var totalCount = data.totalCount,
+						    pageSize = this.getPageSize();
+		                var lastPageSize = totalCount % pageSize;
+		                lastPageSize = lastPageSize ? lastPageSize : pageSize;
+
+		                this._focusedRowIndex = lastPageSize - 1;
+		                this.setPageIndex(this.getPageCount() - 1, true);
+		                this._after("insertRow");
+		            } else {
+		                alert(fail.message);
+		            }
+		        }, this));
+		    } else {//客户端分页
+		        this._dataSource.push(rowData);
+		        this._rowsDataState.push(cb.model.DataState.Add);
+		        var totalCount=this.getTotalCount(),
+                    pageCount=Math.ceil(totalCount/pageSize);
+
+		        this.setPageIndex(pageCount, true);
+		        this._focusedRowIndex = (!totalCount%pageSize?pageSize:totalCount%pageSize)-1;//暂时不通知视图更新，下面的刷新显示会获取焦点信息
+		        this._refreshDisplay();//数据都已在本地了
+		        this._after("insertRow");
+		    }
 		}else{
 			this._dataSource.push(rowData);
 			this._rowsDataState.push(cb.model.DataState.Add);
-			this._focusedRowIndex=rowIndex;//暂时不通知视图更新，下面的刷新显示会获取焦点信息
+			this._focusedRowIndex = this.getTotalCount()-1;//暂时不通知视图更新，下面的刷新显示会获取焦点信息
 			this._refreshDisplay();//数据都已在本地了
 			this._after("insertRow");
 		}
 		
 	},
-	updateRow:function (rowIndex, modifyData) {
+	updateRow: function (rowIndex, modifyData) {
+	    if (this.getReadOnly()) return;
+
 		if (rowIndex < 0||rowIndex>=this._data.rows.length || !modifyData)return false;
 		for (var attr in modifyData) {
 			this.set(rowIndex, attr, null, modifyData[attr]);
@@ -1196,7 +1229,9 @@ $.extend(cb.model.Model3D.prototype,{
 		return true;
 	},
 	
-	deleteRows:function(rowIndexs){
+	deleteRows: function (rowIndexs) {
+	    if (this.getReadOnly()) return;
+
 		if(!cb.isArray(rowIndexs))rowIndexs=Array.prototype.slice.call(arguments,0);
 		
 		var rows=this._getRowsByIndexs(rowIndexs);
@@ -1264,8 +1299,16 @@ $.extend(cb.model.Model3D.prototype,{
 			this.execute("after" + eventName, args);
 		}
 	},
-	setRows:function(ds){
-		this.setDataSource(ds);
+	setRows: function (ds) {
+	    console.log('setRows deleted!');
+	    debugger;
+		//this.setDataSource(ds);
+	},
+    //清空数据源
+	clear: function () {
+	    this._dataSource = [];
+	    this._rowDataState = [];
+	    this._currentTotalCount = 0;
 	},
 	/*
 	syncEditRowModel:function (rowIndex, cellName, propertyName, value) {

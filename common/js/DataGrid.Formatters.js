@@ -25,8 +25,8 @@ function CheckboxFormatter(value,dataContext){
 //按指定精度和小数位显示
 function NumberFormatter(value,dataContext){//scale:小数位数，precision：精度，两者冲突时以小数位为准
 	if(value==undefined)return '';
-	var scale=+this.scale,
-		precision=+this.precision;
+	var scale=+(this.scale||0),
+		precision=+(this.precision||0);
 		
 	value=Math.floor(value*Math.pow(10,scale+1));//整数化到小数位后面一位
 	value=(value/10+value%10/5)/Math.pow(10,scale);//保留scale位小数，且scale后面位四舍五入
@@ -36,7 +36,11 @@ function NumberFormatter(value,dataContext){//scale:小数位数，precision：�
 		pointIndex=value.length-1;
 	}
 	value+='000000000000000000000000';
-	return value.slice(0,pointIndex+scale+1);
+	value=value.slice(0,pointIndex+scale+1);
+	if(value.charAt(value.length-1)==='.'){
+		value=value.slice(0,value.length-1);
+	}	
+	return value;
 }
 //
 function DateTimeFormatter(value,dataContext){

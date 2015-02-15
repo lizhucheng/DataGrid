@@ -173,14 +173,24 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 	this._set_columns=function(control,data){
 		control.setData(data);
 	};
-	
+    //监听状态改变
+	this._set_stateChange = function (control, data) {
+	    var property = data.propertyName;
+	    switch (property) {
+	        case 'readOnly': control.setEditable(!data.value); break;
+            
+	        default: break;
+	    }
+	};
+	this._set_fieldStateChange = function () { };
+	this._set_rowStateChange = function () { };
 	///////////编辑功能相关
 	
 	this._onBeforeCellEditing=function(data){
 		this.getModel()._onBeforeCellEditing(data);
 	};
 	this._set_cellEditing=function(control,data){
-		control._setCellEditing(data.field,data.index,data.record);
+		control._setCellEditing(data.field,data.index,data.row);
 	};
 
 	this._set_registerFieldEditor=function(control,data){
@@ -191,8 +201,8 @@ cb.binding.DataGridBinding = function (mapping, parent) {
 		model.setCellValue(data.rowIndex, data.field,data.value);
 	};
 	this._set_cellValue=function(control,data){
-		var rowData=this.getModel().getRow(data.rowIndex);
-		control.updateCell(data.rowIndex,data.cellName,data.value,rowData);
+		var rowData=this.getModel().getRow(data.index);
+		control.updateCell(data.index,data.field,data.value,rowData);
 	};
 	//支持监听clickRow dblClickRow事件
 	this._onClickRow=function(index){
@@ -242,10 +252,10 @@ cb.binding.DataGridBinding = function (mapping, parent) {
         }
         model.addListener(this);
 		//
-		if(model._data.pager){
+		if(model._data.pager&&model.getPageSize()>0){
 			var viewModelEl=this.getControl().$el.closest('[data-viewmodel='+model._parent.getModelName()+']');
-			var pager=new cb.controls['Pager']($(model._data.pager,viewModelEl),model);
-			
+			var pager=new cb.controls['Pager']($('.'+model._data.pager,viewModelEl),model);
+
 			pager.update(model.getPageInfo());
 			this._pager=pager;
 		}
